@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import AptosSDK
 
 @Suite("AccountAddress Tests")
@@ -21,7 +21,7 @@ struct AccountAddressTests {
     }
 
     @Test("Special addresses use short form")
-    func specialAddresses() throws {
+    func specialAddresses() {
         let zero = AccountAddress.zero
         #expect(zero.toShortString() == "0x0")
         #expect(zero.isSpecial)

@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - TypeTag
+
 /// Represents a Move type tag.
 ///
 /// Type tags are used to describe Move types in transaction payloads
@@ -14,23 +16,23 @@ public indirect enum TypeTag: Sendable, Equatable {
     case u256
     case address
     case signer
-    case vector(TypeTag)
+    case vector(Self)
     case structTag(StructTag)
 
-    // BCS variant indices
+    /// BCS variant indices
     private var variantIndex: UInt32 {
         switch self {
-        case .bool: return 0
-        case .u8: return 1
-        case .u64: return 2
-        case .u128: return 3
-        case .address: return 4
-        case .signer: return 5
-        case .vector: return 6
-        case .structTag: return 7
-        case .u16: return 8
-        case .u32: return 9
-        case .u256: return 10
+        case .bool: 0
+        case .u8: 1
+        case .u64: 2
+        case .u128: 3
+        case .address: 4
+        case .signer: 5
+        case .vector: 6
+        case .structTag: 7
+        case .u16: 8
+        case .u32: 9
+        case .u256: 10
         }
     }
 
@@ -40,13 +42,13 @@ public indirect enum TypeTag: Sendable, Equatable {
     /// - `"bool"`, `"u8"`, `"address"`
     /// - `"vector<u8>"`
     /// - `"0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>"`
-    public static func fromString(_ str: String) throws -> TypeTag {
+    public static func fromString(_ str: String) throws -> Self {
         var parser = TypeTagParser(input: str)
         return try parser.parse()
     }
 }
 
-// MARK: - BCS
+// MARK: BCSSerializable, BCSDeserializable
 
 extension TypeTag: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -54,9 +56,9 @@ extension TypeTag: BCSSerializable, BCSDeserializable {
         switch self {
         case .bool, .u8, .u16, .u32, .u64, .u128, .u256, .address, .signer:
             break
-        case .vector(let inner):
+        case let .vector(inner):
             try inner.serialize(to: &serializer)
-        case .structTag(let tag):
+        case let .structTag(tag):
             try tag.serialize(to: &serializer)
         }
     }
@@ -81,22 +83,22 @@ extension TypeTag: BCSSerializable, BCSDeserializable {
     }
 }
 
-// MARK: - CustomStringConvertible
+// MARK: CustomStringConvertible
 
 extension TypeTag: CustomStringConvertible {
     public var description: String {
         switch self {
-        case .bool: return "bool"
-        case .u8: return "u8"
-        case .u16: return "u16"
-        case .u32: return "u32"
-        case .u64: return "u64"
-        case .u128: return "u128"
-        case .u256: return "u256"
-        case .address: return "address"
-        case .signer: return "signer"
-        case .vector(let inner): return "vector<\(inner)>"
-        case .structTag(let tag): return tag.description
+        case .bool: "bool"
+        case .u8: "u8"
+        case .u16: "u16"
+        case .u32: "u32"
+        case .u64: "u64"
+        case .u128: "u128"
+        case .u256: "u256"
+        case .address: "address"
+        case .signer: "signer"
+        case let .vector(inner): "vector<\(inner)>"
+        case let .structTag(tag): tag.description
         }
     }
 }
@@ -122,14 +124,16 @@ public struct StructTag: Sendable, Equatable {
     /// Parses a struct tag from its string representation.
     ///
     /// Example: `"0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>"`
-    public static func fromString(_ str: String) throws -> StructTag {
+    public static func fromString(_ str: String) throws -> Self {
         let tag = try TypeTag.fromString(str)
-        guard case .structTag(let structTag) = tag else {
+        guard case let .structTag(structTag) = tag else {
             throw AptosError.parse(.invalidStructTag("Expected struct tag, got: \(tag)"))
         }
         return structTag
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension StructTag: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -149,12 +153,14 @@ extension StructTag: BCSSerializable, BCSDeserializable {
         let count = Int(try deserializer.deserializeUleb128())
         var typeArgs = [TypeTag]()
         typeArgs.reserveCapacity(count)
-        for _ in 0..<count {
+        for _ in 0 ..< count {
             typeArgs.append(try TypeTag.deserialize(from: &deserializer))
         }
         return StructTag(address: address, module: module, name: name, typeArgs: typeArgs)
     }
 }
+
+// MARK: CustomStringConvertible
 
 extension StructTag: CustomStringConvertible {
     public var description: String {
@@ -180,15 +186,17 @@ public struct MoveModuleId: Sendable, Equatable {
     }
 
     /// Parses from "address::module_name" format.
-    public static func fromString(_ str: String) throws -> MoveModuleId {
+    public static func fromString(_ str: String) throws -> Self {
         let parts = str.split(separator: "::", maxSplits: 1)
         guard parts.count == 2 else {
             throw AptosError.parse(.invalidModuleId("Expected format 'address::module', got: \(str)"))
         }
         let address = try AccountAddress.fromHex(String(parts[0]))
-        return MoveModuleId(address: address, name: String(parts[1]))
+        return Self(address: address, name: String(parts[1]))
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension MoveModuleId: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -203,23 +211,25 @@ extension MoveModuleId: BCSSerializable, BCSDeserializable {
     }
 }
 
+// MARK: CustomStringConvertible
+
 extension MoveModuleId: CustomStringConvertible {
     public var description: String {
         "\(address)::\(name)"
     }
 }
 
-// MARK: - TypeTag Parser
+// MARK: - TypeTagParser
 
 /// Recursive descent parser for TypeTag strings.
 private struct TypeTagParser {
     private let input: String
     private var index: String.Index
-    private var depth: Int = 0
+    private var depth = 0
 
     init(input: String) {
         self.input = input.trimmingCharacters(in: .whitespaces)
-        self.index = self.input.startIndex
+        index = self.input.startIndex
     }
 
     mutating func parse() throws -> TypeTag {
@@ -229,8 +239,7 @@ private struct TypeTagParser {
         }
         defer { depth -= 1 }
 
-        let tag = try parseInner()
-        return tag
+        return try parseInner()
     }
 
     private mutating func parseInner() throws -> TypeTag {
@@ -242,12 +251,12 @@ private struct TypeTagParser {
 
         // Try primitive types
         if tryConsume("bool") { return .bool }
-        if tryConsume("u8") && !peekIsDigit() { return .u8 }
-        if tryConsume("u16") && !peekIsDigit() { return .u16 }
-        if tryConsume("u32") && !peekIsDigit() { return .u32 }
-        if tryConsume("u64") && !peekIsDigit() { return .u64 }
-        if tryConsume("u128") && !peekIsDigit() { return .u128 }
-        if tryConsume("u256") && !peekIsDigit() { return .u256 }
+        if tryConsume("u8"), !peekIsDigit() { return .u8 }
+        if tryConsume("u16"), !peekIsDigit() { return .u16 }
+        if tryConsume("u32"), !peekIsDigit() { return .u32 }
+        if tryConsume("u64"), !peekIsDigit() { return .u64 }
+        if tryConsume("u128"), !peekIsDigit() { return .u128 }
+        if tryConsume("u256"), !peekIsDigit() { return .u256 }
         if tryConsume("address") { return .address }
         if tryConsume("signer") { return .signer }
 
@@ -360,7 +369,7 @@ private struct TypeTagParser {
     }
 
     private mutating func skipWhitespace() {
-        while index < input.endIndex && input[index].isWhitespace {
+        while index < input.endIndex, input[index].isWhitespace {
             index = input.index(after: index)
         }
     }
@@ -368,7 +377,7 @@ private struct TypeTagParser {
     private mutating func tryConsume(_ str: String) -> Bool {
         let saved = index
         for c in str {
-            guard index < input.endIndex && input[index] == c else {
+            guard index < input.endIndex, input[index] == c else {
                 index = saved
                 return false
             }
@@ -378,7 +387,7 @@ private struct TypeTagParser {
     }
 
     private mutating func tryConsumeChar(_ c: Character) -> Bool {
-        guard index < input.endIndex && input[index] == c else { return false }
+        guard index < input.endIndex, input[index] == c else { return false }
         index = input.index(after: index)
         return true
     }

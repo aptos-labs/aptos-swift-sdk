@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import AptosSDK
 
 @Suite("BCS Deserializer Tests")
@@ -30,14 +30,14 @@ struct DeserializerTests {
     func deserializeU32() throws {
         var d = Deserializer(data: Data([0x04, 0x03, 0x02, 0x01]))
         let val = try d.deserializeU32()
-        #expect(val == 0x01020304)
+        #expect(val == 0x0102_0304)
     }
 
     @Test("Deserialize u64")
     func deserializeU64() throws {
         var d = Deserializer(data: Data([0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]))
         let val = try d.deserializeU64()
-        #expect(val == 0x0102030405060708)
+        #expect(val == 0x0102_0304_0506_0708)
     }
 
     @Test("Deserialize string")
@@ -69,7 +69,7 @@ struct DeserializerTests {
 
     @Test("Roundtrip u64")
     func roundtripU64() throws {
-        let original: UInt64 = 12345678
+        let original: UInt64 = 12_345_678
         let data = try bcsToBytes(original)
         let decoded = try bcsFromBytes(UInt64.self, data)
         #expect(decoded == original)

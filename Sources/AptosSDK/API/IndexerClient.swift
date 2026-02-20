@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - IndexerClient
+
 /// Client for pre-built indexer (GraphQL) queries.
 public struct IndexerClient: Sendable {
     private let config: AptosConfig
@@ -71,10 +73,14 @@ public struct IndexerClient: Sendable {
     }
 }
 
+// MARK: - GraphQLRequest
+
 private struct GraphQLRequest: Encodable {
     let query: String
     let variables: [String: AnyCodable]
 }
+
+// MARK: - GraphQLResponse
 
 /// GraphQL response container.
 public struct GraphQLResponse: Decodable, Sendable {
@@ -82,12 +88,16 @@ public struct GraphQLResponse: Decodable, Sendable {
     public let errors: [GraphQLError]?
 }
 
+// MARK: - GraphQLError
+
 /// GraphQL error.
 public struct GraphQLError: Decodable, Sendable {
     public let message: String
     public let locations: [GraphQLErrorLocation]?
     public let path: [String]?
 }
+
+// MARK: - GraphQLErrorLocation
 
 /// GraphQL error location.
 public struct GraphQLErrorLocation: Decodable, Sendable {

@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - KeylessAccount
+
 /// A keyless account that uses OIDC (e.g., Google, Apple) for authentication.
 ///
 /// Keyless accounts derive their address from the OIDC issuer, audience, and user ID,
@@ -75,14 +77,14 @@ public struct KeylessAccount: Sendable {
         commitData.append(Data(uidVal.utf8))
         let idCommitment = Data(SHA3.sha256(Array(commitData)))
 
-        self.keylessPublicKey = KeylessPublicKey(issuer: issuer, idCommitment: idCommitment)
+        keylessPublicKey = KeylessPublicKey(issuer: issuer, idCommitment: idCommitment)
 
         if let address {
-            self.accountAddress = address
+            accountAddress = address
         } else {
             let anyPubKey = AnyPublicKey.keyless(keylessPublicKey)
             let authKey = try AuthenticationKey.fromSingleKey(publicKey: anyPubKey)
-            self.accountAddress = authKey.accountAddress()
+            accountAddress = authKey.accountAddress()
         }
     }
 
@@ -92,8 +94,12 @@ public struct KeylessAccount: Sendable {
     }
 }
 
+// MARK: AptosAccount
+
 extension KeylessAccount: AptosAccount {
-    public var signingScheme: SigningScheme { .singleKey }
+    public var signingScheme: SigningScheme {
+        .singleKey
+    }
 
     public func sign(message: Data) throws -> AnySignature {
         guard !isExpired else {

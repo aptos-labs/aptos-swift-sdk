@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - MultiKeyAccount
+
 /// A multi-key account supporting M-of-N signatures with mixed key types.
 public struct MultiKeyAccount: Sendable {
     /// The multi-key public key.
@@ -21,13 +23,14 @@ public struct MultiKeyAccount: Sendable {
         }
         guard signers.count >= Int(multiKey.signaturesRequired) else {
             throw AptosError.invalidArgument(
-                "Need at least \(multiKey.signaturesRequired) signers, got \(signers.count)")
+                "Need at least \(multiKey.signaturesRequired) signers, got \(signers.count)"
+            )
         }
         self.multiKey = multiKey
         self.signers = signers
         self.signerIndices = signerIndices
         let authKey = try AuthenticationKey.fromMultiKey(multiKey: multiKey)
-        self.accountAddress = authKey.accountAddress()
+        accountAddress = authKey.accountAddress()
     }
 
     /// Signs a message with all signers and produces a MultiKeySignature.
@@ -44,8 +47,12 @@ public struct MultiKeyAccount: Sendable {
     }
 }
 
+// MARK: AptosAccount
+
 extension MultiKeyAccount: AptosAccount {
-    public var signingScheme: SigningScheme { .multiKey }
+    public var signingScheme: SigningScheme {
+        .multiKey
+    }
 
     public func sign(message: Data) throws -> AnySignature {
         // MultiKey returns multiple signatures, so we wrap in the first one

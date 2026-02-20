@@ -42,10 +42,10 @@ public enum AptosConstants {
     public static let gasPriceCacheTTL: TimeInterval = 300
 
     /// Maximum entries in transaction worker history.
-    public static let maxTransactionWorkerHistory = 10_000
+    public static let maxTransactionWorkerHistory = 10000
 
     /// Eviction count when history limit is exceeded.
-    public static let transactionWorkerEvictionCount = 1_000
+    public static let transactionWorkerEvictionCount = 1000
 
     /// Maximum in-flight transactions for batch worker.
     public static let maximumInFlight = 100

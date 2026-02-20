@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - KeylessPublicKey
+
 /// A keyless public key for OIDC-based authentication.
 ///
 /// Constructed from the issuer (iss) and an identity commitment.
@@ -20,9 +22,11 @@ public struct KeylessPublicKey: Sendable, Equatable, Hashable {
         var bytes = Data()
         bytes.append(contentsOf: issuer.utf8)
         bytes.append(idCommitment)
-        self.data = bytes
+        data = bytes
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension KeylessPublicKey: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {

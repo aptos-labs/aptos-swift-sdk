@@ -7,11 +7,11 @@ public enum Endpoints {
     /// Returns the full node API URL for the given network.
     public static func fullnodeURL(for network: Network) -> String? {
         switch network {
-        case .mainnet: return "https://api.mainnet.aptoslabs.com/v1"
-        case .testnet: return "https://api.testnet.aptoslabs.com/v1"
-        case .devnet: return "https://api.devnet.aptoslabs.com/v1"
-        case .local: return "http://127.0.0.1:8080/v1"
-        case .custom: return nil
+        case .mainnet: "https://api.mainnet.aptoslabs.com/v1"
+        case .testnet: "https://api.testnet.aptoslabs.com/v1"
+        case .devnet: "https://api.devnet.aptoslabs.com/v1"
+        case .local: "http://127.0.0.1:8080/v1"
+        case .custom: nil
         }
     }
 
@@ -20,11 +20,11 @@ public enum Endpoints {
     /// Returns the indexer GraphQL URL for the given network.
     public static func indexerURL(for network: Network) -> String? {
         switch network {
-        case .mainnet: return "https://api.mainnet.aptoslabs.com/v1/graphql"
-        case .testnet: return "https://api.testnet.aptoslabs.com/v1/graphql"
-        case .devnet: return "https://api.devnet.aptoslabs.com/v1/graphql"
-        case .local: return "http://127.0.0.1:8090/v1/graphql"
-        case .custom: return nil
+        case .mainnet: "https://api.mainnet.aptoslabs.com/v1/graphql"
+        case .testnet: "https://api.testnet.aptoslabs.com/v1/graphql"
+        case .devnet: "https://api.devnet.aptoslabs.com/v1/graphql"
+        case .local: "http://127.0.0.1:8090/v1/graphql"
+        case .custom: nil
         }
     }
 
@@ -33,9 +33,9 @@ public enum Endpoints {
     /// Returns the faucet URL for the given network.
     public static func faucetURL(for network: Network) -> String? {
         switch network {
-        case .devnet: return "https://faucet.devnet.aptoslabs.com"
-        case .local: return "http://127.0.0.1:8081"
-        case .mainnet, .testnet, .custom: return nil
+        case .devnet: "https://faucet.devnet.aptoslabs.com"
+        case .local: "http://127.0.0.1:8081"
+        case .mainnet, .testnet, .custom: nil
         }
     }
 

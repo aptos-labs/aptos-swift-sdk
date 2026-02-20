@@ -9,7 +9,7 @@ public struct StakingAPI: Sendable {
     init(config: AptosConfig, client: AptosHTTPClient) {
         self.config = config
         self.client = client
-        self.viewAPI = ViewAPI(config: config, client: client)
+        viewAPI = ViewAPI(config: config, client: client)
     }
 
     /// Gets the current staking pool for a validator.
@@ -22,6 +22,7 @@ public struct StakingAPI: Sendable {
     public func getDelegationPool(_ poolAddress: AccountAddress) async throws -> AccountResource {
         let accountAPI = AccountAPI(config: config, client: client)
         return try await accountAPI.getAccountResource(
-            poolAddress, resourceType: "0x1::delegation_pool::DelegationPool")
+            poolAddress, resourceType: "0x1::delegation_pool::DelegationPool"
+        )
     }
 }

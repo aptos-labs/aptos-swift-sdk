@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - AnyPublicKeyVariant
+
 /// Variant identifiers for AnyPublicKey.
 public enum AnyPublicKeyVariant: UInt32, Sendable {
     case ed25519 = 0
@@ -8,6 +10,8 @@ public enum AnyPublicKeyVariant: UInt32, Sendable {
     case keyless = 3
     case federatedKeyless = 4
 }
+
+// MARK: - AnyPublicKey
 
 /// A public key that can be any of the supported key types.
 ///
@@ -21,35 +25,37 @@ public enum AnyPublicKey: Sendable, Equatable {
     /// The variant identifier for this key type.
     public var variant: AnyPublicKeyVariant {
         switch self {
-        case .ed25519: return .ed25519
-        case .secp256k1: return .secp256k1
-        case .secp256r1: return .secp256r1
-        case .keyless: return .keyless
+        case .ed25519: .ed25519
+        case .secp256k1: .secp256k1
+        case .secp256r1: .secp256r1
+        case .keyless: .keyless
         }
     }
 
     /// The raw public key data.
     public var publicKeyData: Data {
         switch self {
-        case .ed25519(let k): return k.data
-        case .secp256k1(let k): return k.data
-        case .secp256r1(let k): return k.data
-        case .keyless(let k): return k.data
+        case let .ed25519(k): k.data
+        case let .secp256k1(k): k.data
+        case let .secp256r1(k): k.data
+        case let .keyless(k): k.data
         }
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension AnyPublicKey: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         try serializer.serializeU32AsUleb128(variant.rawValue)
         switch self {
-        case .ed25519(let key):
+        case let .ed25519(key):
             try key.serialize(to: &serializer)
-        case .secp256k1(let key):
+        case let .secp256k1(key):
             try key.serialize(to: &serializer)
-        case .secp256r1(let key):
+        case let .secp256r1(key):
             try key.serialize(to: &serializer)
-        case .keyless(let key):
+        case let .keyless(key):
             try key.serialize(to: &serializer)
         }
     }

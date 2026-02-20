@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Account Authenticator
+// MARK: - AccountAuthenticator
 
 /// Per-account authenticator containing a signature from a single account.
 public enum AccountAuthenticator: Sendable, Equatable {
@@ -19,35 +19,37 @@ public enum AccountAuthenticator: Sendable, Equatable {
 
     private var variantIndex: UInt32 {
         switch self {
-        case .ed25519: return 0
-        case .multiEd25519: return 1
-        case .singleKey: return 2
-        case .multiKey: return 3
-        case .noAccountAuthenticator: return 4
-        case .abstraction: return 5
+        case .ed25519: 0
+        case .multiEd25519: 1
+        case .singleKey: 2
+        case .multiKey: 3
+        case .noAccountAuthenticator: 4
+        case .abstraction: 5
         }
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension AccountAuthenticator: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         try serializer.serializeU32AsUleb128(variantIndex)
         switch self {
-        case .ed25519(let pubKey, let sig):
+        case let .ed25519(pubKey, sig):
             try pubKey.serialize(to: &serializer)
             try sig.serialize(to: &serializer)
-        case .multiEd25519(let pubKey, let sig):
+        case let .multiEd25519(pubKey, sig):
             try pubKey.serialize(to: &serializer)
             try sig.serialize(to: &serializer)
-        case .singleKey(let pubKey, let sig):
+        case let .singleKey(pubKey, sig):
             try pubKey.serialize(to: &serializer)
             try sig.serialize(to: &serializer)
-        case .multiKey(let pubKey, let sig):
+        case let .multiKey(pubKey, sig):
             try pubKey.serialize(to: &serializer)
             try sig.serialize(to: &serializer)
         case .noAccountAuthenticator:
             break
-        case .abstraction(let funcInfo, let authData):
+        case let .abstraction(funcInfo, authData):
             try serializer.serializeStr(funcInfo)
             try serializer.serializeBytes(authData)
         }
@@ -80,12 +82,13 @@ extension AccountAuthenticator: BCSSerializable, BCSDeserializable {
             return .abstraction(functionInfo: funcInfo, authData: authData)
         default:
             throw AptosError.serialization(.invalidData(
-                "Unknown AccountAuthenticator variant: \(variant)"))
+                "Unknown AccountAuthenticator variant: \(variant)"
+            ))
         }
     }
 }
 
-// MARK: - Transaction Authenticator
+// MARK: - TransactionAuthenticator
 
 /// Top-level authenticator wrapping all signatures for a transaction.
 public enum TransactionAuthenticator: Sendable, Equatable {
@@ -112,36 +115,38 @@ public enum TransactionAuthenticator: Sendable, Equatable {
 
     private var variantIndex: UInt32 {
         switch self {
-        case .ed25519: return 0
-        case .multiEd25519: return 1
-        case .multiAgent: return 2
-        case .feePayer: return 3
-        case .singleSender: return 4
+        case .ed25519: 0
+        case .multiEd25519: 1
+        case .multiAgent: 2
+        case .feePayer: 3
+        case .singleSender: 4
         }
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension TransactionAuthenticator: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         try serializer.serializeU32AsUleb128(variantIndex)
         switch self {
-        case .ed25519(let pubKey, let sig):
+        case let .ed25519(pubKey, sig):
             try pubKey.serialize(to: &serializer)
             try sig.serialize(to: &serializer)
-        case .multiEd25519(let pubKey, let sig):
+        case let .multiEd25519(pubKey, sig):
             try pubKey.serialize(to: &serializer)
             try sig.serialize(to: &serializer)
-        case .multiAgent(let sender, let addrs, let signers):
+        case let .multiAgent(sender, addrs, signers):
             try sender.serialize(to: &serializer)
             try serializer.serializeVector(addrs)
             try serializer.serializeVector(signers)
-        case .feePayer(let sender, let addrs, let signers, let feeAddr, let feeAuth):
+        case let .feePayer(sender, addrs, signers, feeAddr, feeAuth):
             try sender.serialize(to: &serializer)
             try serializer.serializeVector(addrs)
             try serializer.serializeVector(signers)
             try feeAddr.serialize(to: &serializer)
             try feeAuth.serialize(to: &serializer)
-        case .singleSender(let auth):
+        case let .singleSender(auth):
             try auth.serialize(to: &serializer)
         }
     }
@@ -168,15 +173,20 @@ extension TransactionAuthenticator: BCSSerializable, BCSDeserializable {
             let signers = try deserializer.deserializeVector(AccountAuthenticator.self)
             let feeAddr = try AccountAddress.deserialize(from: &deserializer)
             let feeAuth = try AccountAuthenticator.deserialize(from: &deserializer)
-            return .feePayer(sender: sender, secondarySignerAddresses: addrs,
-                           secondarySigners: signers, feePayerAddress: feeAddr,
-                           feePayerAuthenticator: feeAuth)
+            return .feePayer(
+                sender: sender,
+                secondarySignerAddresses: addrs,
+                secondarySigners: signers,
+                feePayerAddress: feeAddr,
+                feePayerAuthenticator: feeAuth
+            )
         case 4:
             let auth = try AccountAuthenticator.deserialize(from: &deserializer)
             return .singleSender(auth)
         default:
             throw AptosError.serialization(.invalidData(
-                "Unknown TransactionAuthenticator variant: \(variant)"))
+                "Unknown TransactionAuthenticator variant: \(variant)"
+            ))
         }
     }
 }

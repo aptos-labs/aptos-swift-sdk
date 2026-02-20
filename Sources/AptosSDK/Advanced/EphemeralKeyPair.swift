@@ -1,5 +1,7 @@
-import Foundation
 import CryptoKit
+import Foundation
+
+// MARK: - EphemeralKeyPair
 
 /// An ephemeral key pair used for keyless authentication.
 ///
@@ -37,21 +39,22 @@ public struct EphemeralKeyPair: Sendable {
 
         guard expiry <= now + Self.maxExpiryHours * 3600 else {
             throw AptosError.keyless(.invalidConfiguration(
-                "Expiry cannot be more than \(Self.maxExpiryHours) hours in the future"))
+                "Expiry cannot be more than \(Self.maxExpiryHours) hours in the future"
+            ))
         }
 
-        self.privateKey = Ed25519PrivateKey.generate()
-        self.publicKey = try privateKey.publicKey()
+        privateKey = Ed25519PrivateKey.generate()
+        publicKey = try privateKey.publicKey()
         self.expiryDateSecs = expiry
-        self.nonce = Self.computeNonce(publicKey: publicKey, expiryDateSecs: expiry)
+        nonce = Self.computeNonce(publicKey: publicKey, expiryDateSecs: expiry)
     }
 
     /// Creates from an existing private key (for deserialization).
     public init(privateKey: Ed25519PrivateKey, expiryDateSecs: UInt64) throws {
         self.privateKey = privateKey
-        self.publicKey = try privateKey.publicKey()
+        publicKey = try privateKey.publicKey()
         self.expiryDateSecs = expiryDateSecs
-        self.nonce = Self.computeNonce(publicKey: publicKey, expiryDateSecs: expiryDateSecs)
+        nonce = Self.computeNonce(publicKey: publicKey, expiryDateSecs: expiryDateSecs)
     }
 
     /// Whether this key pair has expired.
@@ -78,6 +81,8 @@ public struct EphemeralKeyPair: Sendable {
         return Hex.encodeWithoutPrefix(Data(hash.prefix(16)))
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension EphemeralKeyPair: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {

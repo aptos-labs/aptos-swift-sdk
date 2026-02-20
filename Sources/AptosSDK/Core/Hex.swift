@@ -48,7 +48,7 @@ public enum Hex {
 
         while index < str.endIndex {
             let nextIndex = str.index(index, offsetBy: 2)
-            let byteStr = str[index..<nextIndex]
+            let byteStr = str[index ..< nextIndex]
             guard let byte = UInt8(byteStr, radix: 16) else {
                 throw AptosError.parse(.invalidHex("Invalid hex character in: \(byteStr)"))
             }

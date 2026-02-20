@@ -1,0 +1,83 @@
+# SwiftFormat configuration for Aptos Swift SDK
+# https://github.com/nicklockwood/SwiftFormat
+
+# Swift version
+--swiftversion 6.0
+
+# File options
+--exclude .build
+
+# Formatting rules
+
+# Indentation
+--indent 4
+--tabwidth 4
+--indentcase false
+--ifdef indent
+--xcodeindentation disabled
+
+# Spacing
+--operatorfunc spaced
+--ranges spaced
+--trimwhitespace always
+--emptybraces no-space
+
+# Braces
+--allman false
+--elseposition same-line
+--guardelse next-line
+
+# Wrapping
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--wrapconditions preserve
+--wrapreturntype preserve
+--maxwidth 120
+--closingparen balanced
+
+# Blank lines
+--enable blankLinesBetweenScopes
+--enable blankLinesAtStartOfScope
+--enable blankLinesAtEndOfScope
+
+# Redundancy removal
+--enable redundantSelf
+--self remove
+--enable redundantType
+--redundanttype inferred
+--enable redundantReturn
+--enable redundantParens
+--enable redundantPattern
+--enable redundantInit
+--enable redundantLet
+--enable redundantNilInit
+--enable redundantVoidReturnType
+
+# Organize imports
+--enable sortImports
+--importgrouping testable-bottom
+
+# Mark sections
+--enable markTypes
+--mark-extensions always
+--mark-types always
+--type-mark "MARK: - %t"
+--extension-mark "MARK: - %t + %c"
+
+# Trailing commas
+--commas always
+
+# Semicolons
+--semicolons never
+
+# Void
+--voidtype void
+
+# Disabled rules (preserve SDK patterns)
+--disable wrapMultilineStatementBraces
+--disable sortSwitchCases
+--disable hoistAwait
+--disable hoistTry
+--disable preferKeyPath
+--disable acronyms

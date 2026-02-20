@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - LedgerInfo
+
 /// Ledger information from the full node.
 public struct LedgerInfo: Codable, Sendable {
     public let chainId: UInt8
@@ -25,6 +27,8 @@ public struct LedgerInfo: Codable, Sendable {
     }
 }
 
+// MARK: - AccountData
+
 /// Account data from the full node.
 public struct AccountData: Codable, Sendable {
     public let sequenceNumber: String
@@ -36,17 +40,23 @@ public struct AccountData: Codable, Sendable {
     }
 }
 
+// MARK: - AccountResource
+
 /// An account resource.
 public struct AccountResource: Codable, Sendable {
     public let type: String
     public let data: AnyCodable
 }
 
+// MARK: - MoveModule
+
 /// A Move module.
 public struct MoveModule: Codable, Sendable {
     public let bytecode: String
     public let abi: MoveModuleABI?
 }
+
+// MARK: - MoveModuleABI
 
 /// Move module ABI.
 public struct MoveModuleABI: Codable, Sendable {
@@ -62,6 +72,8 @@ public struct MoveModuleABI: Codable, Sendable {
         case structs
     }
 }
+
+// MARK: - MoveFunctionABI
 
 /// Move function ABI.
 public struct MoveFunctionABI: Codable, Sendable {
@@ -83,10 +95,14 @@ public struct MoveFunctionABI: Codable, Sendable {
     }
 }
 
+// MARK: - GenericTypeParam
+
 /// Generic type parameter constraint.
 public struct GenericTypeParam: Codable, Sendable {
     public let constraints: [String]
 }
+
+// MARK: - MoveStructABI
 
 /// Move struct ABI.
 public struct MoveStructABI: Codable, Sendable {
@@ -105,11 +121,15 @@ public struct MoveStructABI: Codable, Sendable {
     }
 }
 
+// MARK: - MoveStructField
+
 /// Move struct field.
 public struct MoveStructField: Codable, Sendable {
     public let name: String
     public let type: String
 }
+
+// MARK: - GasEstimate
 
 /// Gas estimation result.
 public struct GasEstimate: Codable, Sendable {
@@ -123,6 +143,8 @@ public struct GasEstimate: Codable, Sendable {
         case prioritizedGasEstimate = "prioritized_gas_estimate"
     }
 }
+
+// MARK: - Block
 
 /// Block information.
 public struct Block: Codable, Sendable {
@@ -143,6 +165,8 @@ public struct Block: Codable, Sendable {
     }
 }
 
+// MARK: - PendingTransactionResponse
+
 /// Pending transaction response from submission.
 public struct PendingTransactionResponse: Codable, Sendable {
     public let hash: String
@@ -162,6 +186,8 @@ public struct PendingTransactionResponse: Codable, Sendable {
         case payload
     }
 }
+
+// MARK: - TransactionResponse
 
 /// Transaction response (committed or pending).
 public struct TransactionResponse: Codable, Sendable {
@@ -207,6 +233,8 @@ public struct TransactionResponse: Codable, Sendable {
     }
 }
 
+// MARK: - EventResponse
+
 /// Event response.
 public struct EventResponse: Codable, Sendable {
     public let guid: EventGuid?
@@ -221,6 +249,8 @@ public struct EventResponse: Codable, Sendable {
     }
 }
 
+// MARK: - EventGuid
+
 /// Event GUID.
 public struct EventGuid: Codable, Sendable {
     public let creationNumber: String
@@ -232,6 +262,8 @@ public struct EventGuid: Codable, Sendable {
     }
 }
 
+// MARK: - FaucetResponse
+
 /// Faucet fund response.
 public struct FaucetResponse: Codable, Sendable {
     public let txnHashes: [String]?
@@ -242,6 +274,8 @@ public struct FaucetResponse: Codable, Sendable {
         case message
     }
 }
+
+// MARK: - ViewRequest
 
 /// View function request body.
 public struct ViewRequest: Codable, Sendable {
@@ -269,19 +303,19 @@ public struct AnyCodable: Codable, @unchecked Sendable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         if container.decodeNil() {
-            self.value = NSNull()
+            value = NSNull()
         } else if let bool = try? container.decode(Bool.self) {
-            self.value = bool
+            value = bool
         } else if let int = try? container.decode(Int.self) {
-            self.value = int
+            value = int
         } else if let double = try? container.decode(Double.self) {
-            self.value = double
+            value = double
         } else if let string = try? container.decode(String.self) {
-            self.value = string
-        } else if let array = try? container.decode([AnyCodable].self) {
-            self.value = array.map(\.value)
-        } else if let dict = try? container.decode([String: AnyCodable].self) {
-            self.value = dict.mapValues(\.value)
+            value = string
+        } else if let array = try? container.decode([Self].self) {
+            value = array.map(\.value)
+        } else if let dict = try? container.decode([String: Self].self) {
+            value = dict.mapValues(\.value)
         } else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unable to decode value")
         }
@@ -301,15 +335,15 @@ public struct AnyCodable: Codable, @unchecked Sendable, Equatable {
         case let string as String:
             try container.encode(string)
         case let array as [Any]:
-            try container.encode(array.map { AnyCodable($0) })
+            try container.encode(array.map { Self($0) })
         case let dict as [String: Any]:
-            try container.encode(dict.mapValues { AnyCodable($0) })
+            try container.encode(dict.mapValues { Self($0) })
         default:
             try container.encodeNil()
         }
     }
 
-    public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
+    public static func == (lhs: Self, rhs: Self) -> Bool {
         // Simple equality based on string representation
         "\(lhs.value)" == "\(rhs.value)"
     }

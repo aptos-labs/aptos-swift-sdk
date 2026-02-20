@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import AptosSDK
 
 @Suite("Transaction Tests")
@@ -8,7 +8,7 @@ struct TransactionTests {
     func buildSimpleTransaction() throws {
         let sender = try AccountAddress.fromHex("0x1")
         let payload = TransactionPayload.entryFunction(
-            EntryFunction.aptTransfer(to: try AccountAddress.fromHex("0x2"), amount: 1000)
+            try EntryFunction.aptTransfer(to: AccountAddress.fromHex("0x2"), amount: 1000)
         )
 
         let raw = try TransactionBuilder()
@@ -17,7 +17,7 @@ struct TransactionTests {
             .payload(payload)
             .maxGasAmount(200_000)
             .gasUnitPrice(100)
-            .expirationTimestampSecs(1000000)
+            .expirationTimestampSecs(1_000_000)
             .chainId(.testnet)
             .build()
 
@@ -62,7 +62,7 @@ struct TransactionTests {
             )),
             maxGasAmount: 200_000,
             gasUnitPrice: 100,
-            expirationTimestampSecs: 1000000,
+            expirationTimestampSecs: 1_000_000,
             chainId: .testnet
         )
 
@@ -82,7 +82,7 @@ struct TransactionTests {
             )),
             maxGasAmount: 200_000,
             gasUnitPrice: 100,
-            expirationTimestampSecs: 1000000,
+            expirationTimestampSecs: 1_000_000,
             chainId: .testnet
         )
 
@@ -122,7 +122,7 @@ struct TransactionTests {
             )),
             maxGasAmount: 200_000,
             gasUnitPrice: 100,
-            expirationTimestampSecs: 1000000,
+            expirationTimestampSecs: 1_000_000,
             chainId: .testnet
         )
 
@@ -138,10 +138,11 @@ struct TransactionTests {
 
         // Create signed transaction
         let signed = try TransactionSigner.createSignedTransaction(
-            transaction: txn, senderAuthenticator: auth)
+            transaction: txn, senderAuthenticator: auth
+        )
 
         // Should be serializable
         let bcs = try signed.toBytes()
-        #expect(bcs.count > 0)
+        #expect(!bcs.isEmpty)
     }
 }

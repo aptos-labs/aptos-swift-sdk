@@ -1,5 +1,7 @@
-import Foundation
 import CryptoKit
+import Foundation
+
+// MARK: - AptosHashing
 
 /// Hashing utilities for the Aptos SDK.
 public enum AptosHashing {
@@ -39,6 +41,8 @@ public enum AptosHashing {
         return Data(auth)
     }
 }
+
+// MARK: - AptosDomain
 
 /// Standard domain strings used in the Aptos protocol.
 public enum AptosDomain {

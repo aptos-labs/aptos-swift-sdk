@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - TransactionPayload
+
 /// Transaction payload types.
 public enum TransactionPayload: Sendable, Equatable {
     /// Script payload (variant 0).
@@ -11,22 +13,24 @@ public enum TransactionPayload: Sendable, Equatable {
 
     private var variantIndex: UInt32 {
         switch self {
-        case .script: return 0
-        case .entryFunction: return 2
-        case .multisig: return 3
+        case .script: 0
+        case .entryFunction: 2
+        case .multisig: 3
         }
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension TransactionPayload: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         try serializer.serializeU32AsUleb128(variantIndex)
         switch self {
-        case .script(let s):
+        case let .script(s):
             try s.serialize(to: &serializer)
-        case .entryFunction(let ef):
+        case let .entryFunction(ef):
             try ef.serialize(to: &serializer)
-        case .multisig(let ms):
+        case let .multisig(ms):
             try ms.serialize(to: &serializer)
         }
     }
@@ -43,7 +47,7 @@ extension TransactionPayload: BCSSerializable, BCSDeserializable {
     }
 }
 
-// MARK: - Entry Function
+// MARK: - EntryFunction
 
 /// An entry function call payload.
 public struct EntryFunction: Sendable, Equatable {
@@ -60,29 +64,31 @@ public struct EntryFunction: Sendable, Equatable {
     }
 
     /// Convenience: creates an APT transfer entry function.
-    public static func aptTransfer(to: AccountAddress, amount: UInt64) -> EntryFunction {
+    public static func aptTransfer(to: AccountAddress, amount: UInt64) throws -> Self {
         var amountSerializer = Serializer()
         amountSerializer.serializeU64(amount)
-        return EntryFunction(
+        return Self(
             moduleId: MoveModuleId(address: .one, name: "aptos_account"),
             functionName: "transfer",
             typeArgs: [],
-            args: [try! bcsToBytes(to), amountSerializer.toBytes()]
+            args: [try bcsToBytes(to), amountSerializer.toBytes()]
         )
     }
 
     /// Convenience: creates a coin transfer entry function.
-    public static func coinTransfer(coinType: TypeTag, to: AccountAddress, amount: UInt64) -> EntryFunction {
+    public static func coinTransfer(coinType: TypeTag, to: AccountAddress, amount: UInt64) throws -> Self {
         var amountSerializer = Serializer()
         amountSerializer.serializeU64(amount)
-        return EntryFunction(
+        return Self(
             moduleId: MoveModuleId(address: .one, name: "aptos_account"),
             functionName: "transfer_coins",
             typeArgs: [coinType],
-            args: [try! bcsToBytes(to), amountSerializer.toBytes()]
+            args: [try bcsToBytes(to), amountSerializer.toBytes()]
         )
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension EntryFunction: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -103,12 +109,12 @@ extension EntryFunction: BCSSerializable, BCSDeserializable {
         let funcName = try deserializer.deserializeStr()
         let typeArgCount = Int(try deserializer.deserializeUleb128())
         var typeArgs = [TypeTag]()
-        for _ in 0..<typeArgCount {
+        for _ in 0 ..< typeArgCount {
             typeArgs.append(try TypeTag.deserialize(from: &deserializer))
         }
         let argCount = Int(try deserializer.deserializeUleb128())
         var args = [Data]()
-        for _ in 0..<argCount {
+        for _ in 0 ..< argCount {
             args.append(try deserializer.deserializeBytes())
         }
         return EntryFunction(moduleId: moduleId, functionName: funcName, typeArgs: typeArgs, args: args)
@@ -130,6 +136,8 @@ public struct Script: Sendable, Equatable {
     }
 }
 
+// MARK: BCSSerializable, BCSDeserializable
+
 extension Script: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         try serializer.serializeBytes(code)
@@ -144,13 +152,15 @@ extension Script: BCSSerializable, BCSDeserializable {
         let code = try deserializer.deserializeBytes()
         let typeArgCount = Int(try deserializer.deserializeUleb128())
         var typeArgs = [TypeTag]()
-        for _ in 0..<typeArgCount {
+        for _ in 0 ..< typeArgCount {
             typeArgs.append(try TypeTag.deserialize(from: &deserializer))
         }
         let args = try deserializer.deserializeVector(ScriptArgument.self)
         return Script(code: code, typeArgs: typeArgs, args: args)
     }
 }
+
+// MARK: - ScriptArgument
 
 /// Script function argument.
 public enum ScriptArgument: Sendable, Equatable {
@@ -166,32 +176,34 @@ public enum ScriptArgument: Sendable, Equatable {
 
     private var variantIndex: UInt32 {
         switch self {
-        case .u8: return 0
-        case .u64: return 1
-        case .u128: return 2
-        case .address: return 3
-        case .u8Vector: return 4
-        case .bool: return 5
-        case .u16: return 6
-        case .u32: return 7
-        case .u256: return 8
+        case .u8: 0
+        case .u64: 1
+        case .u128: 2
+        case .address: 3
+        case .u8Vector: 4
+        case .bool: 5
+        case .u16: 6
+        case .u32: 7
+        case .u256: 8
         }
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension ScriptArgument: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         try serializer.serializeU32AsUleb128(variantIndex)
         switch self {
-        case .u8(let v): serializer.serializeU8(v)
-        case .u64(let v): serializer.serializeU64(v)
-        case .u128(let v): serializer.serializeFixedBytes(v)
-        case .address(let v): try v.serialize(to: &serializer)
-        case .u8Vector(let v): try serializer.serializeBytes(v)
-        case .bool(let v): serializer.serializeBool(v)
-        case .u16(let v): serializer.serializeU16(v)
-        case .u32(let v): serializer.serializeU32(v)
-        case .u256(let v): serializer.serializeFixedBytes(v)
+        case let .u8(v): serializer.serializeU8(v)
+        case let .u64(v): serializer.serializeU64(v)
+        case let .u128(v): serializer.serializeFixedBytes(v)
+        case let .address(v): try v.serialize(to: &serializer)
+        case let .u8Vector(v): try serializer.serializeBytes(v)
+        case let .bool(v): serializer.serializeBool(v)
+        case let .u16(v): serializer.serializeU16(v)
+        case let .u32(v): serializer.serializeU32(v)
+        case let .u256(v): serializer.serializeFixedBytes(v)
         }
     }
 
@@ -213,7 +225,7 @@ extension ScriptArgument: BCSSerializable, BCSDeserializable {
     }
 }
 
-// MARK: - Multisig Payload
+// MARK: - MultisigPayload
 
 /// A multisig transaction payload.
 public struct MultisigPayload: Sendable, Equatable {
@@ -225,6 +237,8 @@ public struct MultisigPayload: Sendable, Equatable {
         self.entryFunction = entryFunction
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension MultisigPayload: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {

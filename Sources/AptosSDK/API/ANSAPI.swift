@@ -9,7 +9,7 @@ public struct ANSAPI: Sendable {
     init(config: AptosConfig, client: AptosHTTPClient) {
         self.config = config
         self.client = client
-        self.viewAPI = ViewAPI(config: config, client: client)
+        viewAPI = ViewAPI(config: config, client: client)
     }
 
     /// Looks up the primary name for an address.

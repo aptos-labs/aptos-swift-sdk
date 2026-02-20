@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - AptosError
+
 /// Top-level error type for the Aptos SDK.
 public enum AptosError: Error, Sendable, LocalizedError {
     case parse(ParseError)
@@ -17,21 +19,23 @@ public enum AptosError: Error, Sendable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .parse(let e): return "Parse error: \(e.localizedDescription)"
-        case .crypto(let e): return "Crypto error: \(e.localizedDescription)"
-        case .serialization(let e): return "Serialization error: \(e.localizedDescription)"
-        case .network(let e): return "Network error: \(e.localizedDescription)"
-        case .api(let e): return "API error: \(e.localizedDescription)"
-        case .transaction(let e): return "Transaction error: \(e.localizedDescription)"
-        case .keyless(let e): return "Keyless error: \(e.localizedDescription)"
-        case .invalidArgument(let msg): return "Invalid argument: \(msg)"
-        case .invalidState(let msg): return "Invalid state: \(msg)"
-        case .notFound(let msg): return "Not found: \(msg)"
-        case .timeout(let msg): return "Timeout: \(msg)"
-        case .unknown(let msg): return "Unknown error: \(msg)"
+        case let .parse(e): "Parse error: \(e.localizedDescription)"
+        case let .crypto(e): "Crypto error: \(e.localizedDescription)"
+        case let .serialization(e): "Serialization error: \(e.localizedDescription)"
+        case let .network(e): "Network error: \(e.localizedDescription)"
+        case let .api(e): "API error: \(e.localizedDescription)"
+        case let .transaction(e): "Transaction error: \(e.localizedDescription)"
+        case let .keyless(e): "Keyless error: \(e.localizedDescription)"
+        case let .invalidArgument(msg): "Invalid argument: \(msg)"
+        case let .invalidState(msg): "Invalid state: \(msg)"
+        case let .notFound(msg): "Not found: \(msg)"
+        case let .timeout(msg): "Timeout: \(msg)"
+        case let .unknown(msg): "Unknown error: \(msg)"
         }
     }
 }
+
+// MARK: - ParseError
 
 public enum ParseError: Error, Sendable, LocalizedError {
     case invalidHex(String)
@@ -45,17 +49,19 @@ public enum ParseError: Error, Sendable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .invalidHex(let msg): return "Invalid hex: \(msg)"
-        case .invalidAddress(let msg): return "Invalid address: \(msg)"
-        case .invalidTypeTag(let msg): return "Invalid type tag: \(msg)"
-        case .invalidStructTag(let msg): return "Invalid struct tag: \(msg)"
-        case .invalidModuleId(let msg): return "Invalid module ID: \(msg)"
-        case .invalidMoveFunction(let msg): return "Invalid move function: \(msg)"
-        case .invalidDerivationPath(let msg): return "Invalid derivation path: \(msg)"
-        case .invalidMnemonic(let msg): return "Invalid mnemonic: \(msg)"
+        case let .invalidHex(msg): "Invalid hex: \(msg)"
+        case let .invalidAddress(msg): "Invalid address: \(msg)"
+        case let .invalidTypeTag(msg): "Invalid type tag: \(msg)"
+        case let .invalidStructTag(msg): "Invalid struct tag: \(msg)"
+        case let .invalidModuleId(msg): "Invalid module ID: \(msg)"
+        case let .invalidMoveFunction(msg): "Invalid move function: \(msg)"
+        case let .invalidDerivationPath(msg): "Invalid derivation path: \(msg)"
+        case let .invalidMnemonic(msg): "Invalid mnemonic: \(msg)"
         }
     }
 }
+
+// MARK: - CryptoError
 
 public enum CryptoError: Error, Sendable, LocalizedError {
     case invalidKeyLength(expected: Int, actual: Int)
@@ -70,20 +76,22 @@ public enum CryptoError: Error, Sendable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .invalidKeyLength(let expected, let actual):
-            return "Invalid key length: expected \(expected), got \(actual)"
-        case .invalidSignatureLength(let expected, let actual):
-            return "Invalid signature length: expected \(expected), got \(actual)"
-        case .invalidPublicKey(let msg): return "Invalid public key: \(msg)"
-        case .invalidPrivateKey(let msg): return "Invalid private key: \(msg)"
-        case .invalidSignature(let msg): return "Invalid signature: \(msg)"
-        case .signatureFailed(let msg): return "Signature failed: \(msg)"
-        case .verificationFailed(let msg): return "Verification failed: \(msg)"
-        case .invalidSeed(let msg): return "Invalid seed: \(msg)"
-        case .unsupportedScheme(let msg): return "Unsupported scheme: \(msg)"
+        case let .invalidKeyLength(expected, actual):
+            "Invalid key length: expected \(expected), got \(actual)"
+        case let .invalidSignatureLength(expected, actual):
+            "Invalid signature length: expected \(expected), got \(actual)"
+        case let .invalidPublicKey(msg): "Invalid public key: \(msg)"
+        case let .invalidPrivateKey(msg): "Invalid private key: \(msg)"
+        case let .invalidSignature(msg): "Invalid signature: \(msg)"
+        case let .signatureFailed(msg): "Signature failed: \(msg)"
+        case let .verificationFailed(msg): "Verification failed: \(msg)"
+        case let .invalidSeed(msg): "Invalid seed: \(msg)"
+        case let .unsupportedScheme(msg): "Unsupported scheme: \(msg)"
         }
     }
 }
+
+// MARK: - SerializationError
 
 public enum SerializationError: Error, Sendable, LocalizedError {
     case outOfRange(String)
@@ -96,16 +104,18 @@ public enum SerializationError: Error, Sendable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .outOfRange(let msg): return "Out of range: \(msg)"
-        case .bufferOverflow(let msg): return "Buffer overflow: \(msg)"
-        case .unexpectedEnd(let msg): return "Unexpected end of data: \(msg)"
-        case .invalidData(let msg): return "Invalid data: \(msg)"
-        case .maxLengthExceeded(let msg): return "Max length exceeded: \(msg)"
-        case .depthLimitExceeded(let msg): return "Depth limit exceeded: \(msg)"
-        case .remainingBytes(let count): return "Remaining \(count) unconsumed bytes"
+        case let .outOfRange(msg): "Out of range: \(msg)"
+        case let .bufferOverflow(msg): "Buffer overflow: \(msg)"
+        case let .unexpectedEnd(msg): "Unexpected end of data: \(msg)"
+        case let .invalidData(msg): "Invalid data: \(msg)"
+        case let .maxLengthExceeded(msg): "Max length exceeded: \(msg)"
+        case let .depthLimitExceeded(msg): "Depth limit exceeded: \(msg)"
+        case let .remainingBytes(count): "Remaining \(count) unconsumed bytes"
         }
     }
 }
+
+// MARK: - NetworkError
 
 public enum NetworkError: Error, Sendable, LocalizedError {
     case connectionFailed(String)
@@ -117,15 +127,17 @@ public enum NetworkError: Error, Sendable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .connectionFailed(let msg): return "Connection failed: \(msg)"
-        case .timeout(let msg): return "Timeout: \(msg)"
-        case .invalidURL(let msg): return "Invalid URL: \(msg)"
-        case .invalidResponse(let msg): return "Invalid response: \(msg)"
-        case .httpError(let code, let msg): return "HTTP \(code): \(msg)"
-        case .retryExhausted(let msg): return "Retry exhausted: \(msg)"
+        case let .connectionFailed(msg): "Connection failed: \(msg)"
+        case let .timeout(msg): "Timeout: \(msg)"
+        case let .invalidURL(msg): "Invalid URL: \(msg)"
+        case let .invalidResponse(msg): "Invalid response: \(msg)"
+        case let .httpError(code, msg): "HTTP \(code): \(msg)"
+        case let .retryExhausted(msg): "Retry exhausted: \(msg)"
         }
     }
 }
+
+// MARK: - APIError
 
 public enum APIError: Error, Sendable, LocalizedError {
     case aptosApiError(message: String, errorCode: String?, vmErrorCode: Int?)
@@ -135,18 +147,20 @@ public enum APIError: Error, Sendable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .aptosApiError(let msg, let code, let vmCode):
+        case let .aptosApiError(msg, code, vmCode):
             var desc = msg
             if let code { desc += " (code: \(code))" }
             if let vmCode { desc += " (vm_error: \(vmCode))" }
             return desc
-        case .indexerError(let msg, let errors):
+        case let .indexerError(msg, errors):
             return "\(msg): \(errors.joined(separator: ", "))"
-        case .faucetError(let msg): return "Faucet error: \(msg)"
-        case .decodingError(let msg): return "Decoding error: \(msg)"
+        case let .faucetError(msg): return "Faucet error: \(msg)"
+        case let .decodingError(msg): return "Decoding error: \(msg)"
         }
     }
 }
+
+// MARK: - TransactionError
 
 public enum TransactionError: Error, Sendable, LocalizedError {
     case buildFailed(String)
@@ -162,19 +176,21 @@ public enum TransactionError: Error, Sendable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .buildFailed(let msg): return "Build failed: \(msg)"
-        case .signFailed(let msg): return "Sign failed: \(msg)"
-        case .submitFailed(let msg): return "Submit failed: \(msg)"
-        case .simulationFailed(let msg): return "Simulation failed: \(msg)"
-        case .waitFailed(let msg): return "Wait failed: \(msg)"
-        case .executionFailed(let hash, let msg): return "Execution failed (\(hash)): \(msg)"
-        case .expired(let msg): return "Transaction expired: \(msg)"
-        case .invalidPayload(let msg): return "Invalid payload: \(msg)"
-        case .invalidAuthenticator(let msg): return "Invalid authenticator: \(msg)"
-        case .sequenceNumberMismatch(let msg): return "Sequence number mismatch: \(msg)"
+        case let .buildFailed(msg): "Build failed: \(msg)"
+        case let .signFailed(msg): "Sign failed: \(msg)"
+        case let .submitFailed(msg): "Submit failed: \(msg)"
+        case let .simulationFailed(msg): "Simulation failed: \(msg)"
+        case let .waitFailed(msg): "Wait failed: \(msg)"
+        case let .executionFailed(hash, msg): "Execution failed (\(hash)): \(msg)"
+        case let .expired(msg): "Transaction expired: \(msg)"
+        case let .invalidPayload(msg): "Invalid payload: \(msg)"
+        case let .invalidAuthenticator(msg): "Invalid authenticator: \(msg)"
+        case let .sequenceNumberMismatch(msg): "Sequence number mismatch: \(msg)"
         }
     }
 }
+
+// MARK: - KeylessError
 
 public enum KeylessError: Error, Sendable, LocalizedError {
     case invalidJWT(String)
@@ -186,12 +202,12 @@ public enum KeylessError: Error, Sendable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .invalidJWT(let msg): return "Invalid JWT: \(msg)"
-        case .pepperServiceError(let msg): return "Pepper service error: \(msg)"
-        case .proverServiceError(let msg): return "Prover service error: \(msg)"
-        case .proofExpired(let msg): return "Proof expired: \(msg)"
-        case .invalidEphemeralKeyPair(let msg): return "Invalid ephemeral key pair: \(msg)"
-        case .invalidConfiguration(let msg): return "Invalid configuration: \(msg)"
+        case let .invalidJWT(msg): "Invalid JWT: \(msg)"
+        case let .pepperServiceError(msg): "Pepper service error: \(msg)"
+        case let .proverServiceError(msg): "Prover service error: \(msg)"
+        case let .proofExpired(msg): "Proof expired: \(msg)"
+        case let .invalidEphemeralKeyPair(msg): "Invalid ephemeral key pair: \(msg)"
+        case let .invalidConfiguration(msg): "Invalid configuration: \(msg)"
         }
     }
 }

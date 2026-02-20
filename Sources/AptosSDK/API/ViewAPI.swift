@@ -33,7 +33,8 @@ public struct ViewAPI: Sendable {
             arguments: [address.toHex()]
         )
         guard let first = result.first, let balanceStr = first.value as? String,
-              let balance = UInt64(balanceStr) else {
+              let balance = UInt64(balanceStr)
+        else {
             throw AptosError.api(.decodingError("Failed to parse balance"))
         }
         return balance

@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - TableAPI
+
 /// Table state queries.
 public struct TableAPI: Sendable {
     private let config: AptosConfig
@@ -22,6 +24,8 @@ public struct TableAPI: Sendable {
         return try await client.post(url: url, path: "tables/\(tableHandle)/item", body: body)
     }
 }
+
+// MARK: - TableItemRequest
 
 private struct TableItemRequest: Encodable {
     let keyType: String

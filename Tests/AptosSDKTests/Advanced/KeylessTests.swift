@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import AptosSDK
 
 @Suite("Keyless Tests")
@@ -23,7 +23,7 @@ struct KeylessTests {
     @Test("Ephemeral key pair nonce is deterministic")
     func ephemeralNonceDeterministic() throws {
         let privKey = Ed25519PrivateKey.generate()
-        let expiry: UInt64 = UInt64(Date().timeIntervalSince1970) + 3600
+        let expiry = UInt64(Date().timeIntervalSince1970) + 3600
 
         let ekp1 = try EphemeralKeyPair(privateKey: privKey, expiryDateSecs: expiry)
         let ekp2 = try EphemeralKeyPair(privateKey: privKey, expiryDateSecs: expiry)

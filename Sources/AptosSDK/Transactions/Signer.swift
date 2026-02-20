@@ -26,10 +26,9 @@ public enum TransactionSigner {
         senderAuthenticator: AccountAuthenticator,
         feePayerAuthenticator: AccountAuthenticator? = nil
     ) throws -> SignedTransaction {
-        let txAuth: TransactionAuthenticator
-
-        if let feePayer = transaction.feePayerAddress, let feePayerAuth = feePayerAuthenticator {
-            txAuth = .feePayer(
+        let txAuth: TransactionAuthenticator = if let feePayer = transaction.feePayerAddress,
+                                                  let feePayerAuth = feePayerAuthenticator {
+            .feePayer(
                 sender: senderAuthenticator,
                 secondarySignerAddresses: [],
                 secondarySigners: [],
@@ -38,10 +37,10 @@ public enum TransactionSigner {
             )
         } else {
             switch senderAuthenticator {
-            case .ed25519(let pubKey, let sig):
-                txAuth = .ed25519(publicKey: pubKey, signature: sig)
+            case let .ed25519(pubKey, sig):
+                .ed25519(publicKey: pubKey, signature: sig)
             default:
-                txAuth = .singleSender(senderAuthenticator)
+                .singleSender(senderAuthenticator)
             }
         }
 
@@ -58,10 +57,9 @@ public enum TransactionSigner {
         secondaryAuthenticators: [AccountAuthenticator],
         feePayerAuthenticator: AccountAuthenticator? = nil
     ) throws -> SignedTransaction {
-        let txAuth: TransactionAuthenticator
-
-        if let feePayer = transaction.feePayerAddress, let feePayerAuth = feePayerAuthenticator {
-            txAuth = .feePayer(
+        let txAuth: TransactionAuthenticator = if let feePayer = transaction.feePayerAddress,
+                                                  let feePayerAuth = feePayerAuthenticator {
+            .feePayer(
                 sender: senderAuthenticator,
                 secondarySignerAddresses: transaction.secondarySignerAddresses,
                 secondarySigners: secondaryAuthenticators,
@@ -69,7 +67,7 @@ public enum TransactionSigner {
                 feePayerAuthenticator: feePayerAuth
             )
         } else {
-            txAuth = .multiAgent(
+            .multiAgent(
                 sender: senderAuthenticator,
                 secondarySignerAddresses: transaction.secondarySignerAddresses,
                 secondarySigners: secondaryAuthenticators

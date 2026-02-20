@@ -11,10 +11,10 @@ public enum Network: String, Sendable, CaseIterable {
     /// Chain ID for predefined networks.
     public var chainId: ChainId? {
         switch self {
-        case .mainnet: return .mainnet
-        case .testnet: return .testnet
-        case .local: return .local
-        case .devnet, .custom: return nil
+        case .mainnet: .mainnet
+        case .testnet: .testnet
+        case .local: .local
+        case .devnet, .custom: nil
         }
     }
 }

@@ -1,5 +1,7 @@
-import Foundation
 import CryptoKit
+import Foundation
+
+// MARK: - Secp256r1PublicKey
 
 /// Secp256r1 (P-256/NIST P-256) public key for WebAuthn compatibility.
 public struct Secp256r1PublicKey: Sendable, Equatable, Hashable {
@@ -19,14 +21,15 @@ public struct Secp256r1PublicKey: Sendable, Equatable, Hashable {
             self.data = Data(key.x963Representation)
         } else {
             throw AptosError.crypto(.invalidKeyLength(
-                expected: Self.uncompressedLength, actual: data.count))
+                expected: Self.uncompressedLength, actual: data.count
+            ))
         }
     }
 
     /// Creates from a hex string.
-    public static func fromHex(_ hex: String) throws -> Secp256r1PublicKey {
+    public static func fromHex(_ hex: String) throws -> Self {
         let data = try Hex.decode(hex)
-        return try Secp256r1PublicKey(data: data)
+        return try Self(data: data)
     }
 
     /// Verifies a signature over a message.
@@ -47,6 +50,8 @@ public struct Secp256r1PublicKey: Sendable, Equatable, Hashable {
     }
 }
 
+// MARK: BCSSerializable, BCSDeserializable
+
 extension Secp256r1PublicKey: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         try serializer.serializeBytes(data)
@@ -58,6 +63,8 @@ extension Secp256r1PublicKey: BCSSerializable, BCSDeserializable {
     }
 }
 
+// MARK: - Secp256r1PrivateKey
+
 /// Secp256r1 (P-256) private key (32 bytes).
 public struct Secp256r1PrivateKey: Sendable, Equatable {
     public let data: Data
@@ -65,9 +72,9 @@ public struct Secp256r1PrivateKey: Sendable, Equatable {
     public static let length = 32
 
     /// Generates a new random private key.
-    public static func generate() -> Secp256r1PrivateKey {
+    public static func generate() -> Self {
         let key = P256.Signing.PrivateKey()
-        return Secp256r1PrivateKey(unchecked: Data(key.rawRepresentation))
+        return Self(unchecked: Data(key.rawRepresentation))
     }
 
     /// Creates from raw bytes.
@@ -80,13 +87,13 @@ public struct Secp256r1PrivateKey: Sendable, Equatable {
     }
 
     /// Creates from a hex string.
-    public static func fromHex(_ hex: String) throws -> Secp256r1PrivateKey {
+    public static func fromHex(_ hex: String) throws -> Self {
         let data = try Hex.decode(hex)
-        return try Secp256r1PrivateKey(data: data)
+        return try Self(data: data)
     }
 
     /// Creates from an AIP-80 formatted string.
-    public static func fromAIP80(_ aip80: String) throws -> Secp256r1PrivateKey {
+    public static func fromAIP80(_ aip80: String) throws -> Self {
         let prefix = "secp256r1-priv-"
         guard aip80.hasPrefix(prefix) else {
             throw AptosError.crypto(.invalidPrivateKey("Invalid AIP-80 format for Secp256r1"))
@@ -118,6 +125,8 @@ public struct Secp256r1PrivateKey: Sendable, Equatable {
     }
 }
 
+// MARK: BCSSerializable, BCSDeserializable
+
 extension Secp256r1PrivateKey: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         try serializer.serializeBytes(data)
@@ -128,6 +137,8 @@ extension Secp256r1PrivateKey: BCSSerializable, BCSDeserializable {
         return try Secp256r1PrivateKey(data: bytes)
     }
 }
+
+// MARK: - Secp256r1Signature
 
 /// Secp256r1 ECDSA signature (64 bytes, raw format: r || s).
 public struct Secp256r1Signature: Sendable, Equatable {
@@ -144,9 +155,9 @@ public struct Secp256r1Signature: Sendable, Equatable {
     }
 
     /// Creates from a hex string.
-    public static func fromHex(_ hex: String) throws -> Secp256r1Signature {
+    public static func fromHex(_ hex: String) throws -> Self {
         let data = try Hex.decode(hex)
-        return try Secp256r1Signature(data: data)
+        return try Self(data: data)
     }
 
     /// Returns the hex representation.
@@ -154,6 +165,8 @@ public struct Secp256r1Signature: Sendable, Equatable {
         Hex.encode(data)
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension Secp256r1Signature: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {

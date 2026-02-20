@@ -61,14 +61,13 @@ public enum MultiAgentUtils {
             secondaryAuths.append(auth)
         }
 
-        let feePayerAuth: AccountAuthenticator?
-        if let feePayer {
-            feePayerAuth = try TransactionSigner.signAsFeePayer(
+        let feePayerAuth: AccountAuthenticator? = if let feePayer {
+            try TransactionSigner.signAsFeePayer(
                 transaction: .multiAgent(transaction),
                 feePayer: feePayer
             )
         } else {
-            feePayerAuth = nil
+            nil
         }
 
         return try TransactionSigner.createMultiAgentSignedTransaction(

@@ -1,6 +1,8 @@
 import Foundation
 import P256K
 
+// MARK: - Secp256k1PublicKey
+
 /// Secp256k1 public key (33 bytes compressed or 65 bytes uncompressed).
 public struct Secp256k1PublicKey: Sendable, Equatable, Hashable {
     /// The raw compressed public key bytes (33 bytes).
@@ -18,32 +20,36 @@ public struct Secp256k1PublicKey: Sendable, Equatable, Hashable {
         } else if data.count == Self.uncompressedLength {
             // Compress the key
             let key = try P256K.Signing.PublicKey(
-                dataRepresentation: data, format: .uncompressed)
+                dataRepresentation: data, format: .uncompressed
+            )
             self.data = Data(key.dataRepresentation)
         } else {
             throw AptosError.crypto(.invalidKeyLength(
-                expected: Self.compressedLength, actual: data.count))
+                expected: Self.compressedLength, actual: data.count
+            ))
         }
     }
 
     /// Creates from a hex string.
-    public static func fromHex(_ hex: String) throws -> Secp256k1PublicKey {
+    public static func fromHex(_ hex: String) throws -> Self {
         let data = try Hex.decode(hex)
-        return try Secp256k1PublicKey(data: data)
+        return try Self(data: data)
     }
 
     /// Verifies a signature over a message hash.
     public func verify(message: Data, signature: Secp256k1Signature) -> Bool {
         guard let key = try? P256K.Signing.PublicKey(
             dataRepresentation: data, format: .compressed
-        ) else { return false }
+        )
+        else { return false }
 
         // Hash the message with SHA3-256 first
         let hash = SHA3.sha256(message)
 
         guard let ecdsaSig = try? P256K.Signing.ECDSASignature(
             dataRepresentation: signature.data
-        ) else { return false }
+        )
+        else { return false }
 
         return key.isValidSignature(ecdsaSig, for: hash)
     }
@@ -53,6 +59,8 @@ public struct Secp256k1PublicKey: Sendable, Equatable, Hashable {
         Hex.encode(data)
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension Secp256k1PublicKey: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -65,6 +73,8 @@ extension Secp256k1PublicKey: BCSSerializable, BCSDeserializable {
     }
 }
 
+// MARK: - Secp256k1PrivateKey
+
 /// Secp256k1 private key (32 bytes).
 public struct Secp256k1PrivateKey: Sendable, Equatable {
     public let data: Data
@@ -72,9 +82,12 @@ public struct Secp256k1PrivateKey: Sendable, Equatable {
     public static let length = 32
 
     /// Generates a new random private key.
-    public static func generate() -> Secp256k1PrivateKey {
-        let key = try! P256K.Signing.PrivateKey()
-        return Secp256k1PrivateKey(unchecked: Data(key.dataRepresentation))
+    public static func generate() -> Self {
+        // P256K key generation is guaranteed to succeed with random entropy
+        guard let key = try? P256K.Signing.PrivateKey() else {
+            fatalError("Failed to generate secp256k1 key - system entropy unavailable")
+        }
+        return Self(unchecked: Data(key.dataRepresentation))
     }
 
     /// Creates from raw bytes.
@@ -88,13 +101,13 @@ public struct Secp256k1PrivateKey: Sendable, Equatable {
     }
 
     /// Creates from a hex string.
-    public static func fromHex(_ hex: String) throws -> Secp256k1PrivateKey {
+    public static func fromHex(_ hex: String) throws -> Self {
         let data = try Hex.decode(hex)
-        return try Secp256k1PrivateKey(data: data)
+        return try Self(data: data)
     }
 
     /// Creates from an AIP-80 formatted string.
-    public static func fromAIP80(_ aip80: String) throws -> Secp256k1PrivateKey {
+    public static func fromAIP80(_ aip80: String) throws -> Self {
         let prefix = "secp256k1-priv-"
         guard aip80.hasPrefix(prefix) else {
             throw AptosError.crypto(.invalidPrivateKey("Invalid AIP-80 format for Secp256k1"))
@@ -127,6 +140,8 @@ public struct Secp256k1PrivateKey: Sendable, Equatable {
     }
 }
 
+// MARK: BCSSerializable, BCSDeserializable
+
 extension Secp256k1PrivateKey: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         try serializer.serializeBytes(data)
@@ -137,6 +152,8 @@ extension Secp256k1PrivateKey: BCSSerializable, BCSDeserializable {
         return try Secp256k1PrivateKey(data: bytes)
     }
 }
+
+// MARK: - Secp256k1Signature
 
 /// Secp256k1 ECDSA signature (64 bytes, compact format).
 public struct Secp256k1Signature: Sendable, Equatable {
@@ -153,9 +170,9 @@ public struct Secp256k1Signature: Sendable, Equatable {
     }
 
     /// Creates from a hex string.
-    public static func fromHex(_ hex: String) throws -> Secp256k1Signature {
+    public static func fromHex(_ hex: String) throws -> Self {
         let data = try Hex.decode(hex)
-        return try Secp256k1Signature(data: data)
+        return try Self(data: data)
     }
 
     /// Returns the hex representation with "0x" prefix.
@@ -163,6 +180,8 @@ public struct Secp256k1Signature: Sendable, Equatable {
         Hex.encode(data)
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension Secp256k1Signature: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {

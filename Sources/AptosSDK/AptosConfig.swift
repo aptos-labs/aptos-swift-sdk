@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - AptosConfig
+
 /// Configuration for the Aptos SDK client.
 public struct AptosConfig: Sendable {
     /// The network to connect to.
@@ -65,23 +67,23 @@ public struct AptosConfig: Sendable {
     // MARK: - Convenience Initializers
 
     /// Creates a mainnet configuration.
-    public static func mainnet(clientConfig: ClientConfig = ClientConfig()) -> AptosConfig {
-        AptosConfig(network: .mainnet, clientConfig: clientConfig)
+    public static func mainnet(clientConfig: ClientConfig = ClientConfig()) -> Self {
+        Self(network: .mainnet, clientConfig: clientConfig)
     }
 
     /// Creates a testnet configuration.
-    public static func testnet(clientConfig: ClientConfig = ClientConfig()) -> AptosConfig {
-        AptosConfig(network: .testnet, clientConfig: clientConfig)
+    public static func testnet(clientConfig: ClientConfig = ClientConfig()) -> Self {
+        Self(network: .testnet, clientConfig: clientConfig)
     }
 
     /// Creates a devnet configuration.
-    public static func devnet(clientConfig: ClientConfig = ClientConfig()) -> AptosConfig {
-        AptosConfig(network: .devnet, clientConfig: clientConfig)
+    public static func devnet(clientConfig: ClientConfig = ClientConfig()) -> Self {
+        Self(network: .devnet, clientConfig: clientConfig)
     }
 
     /// Creates a local network configuration.
-    public static func localnet(clientConfig: ClientConfig = ClientConfig()) -> AptosConfig {
-        AptosConfig(network: .local, clientConfig: clientConfig)
+    public static func localnet(clientConfig: ClientConfig = ClientConfig()) -> Self {
+        Self(network: .local, clientConfig: clientConfig)
     }
 
     // MARK: - URL Resolution
@@ -132,7 +134,7 @@ public struct AptosConfig: Sendable {
     }
 }
 
-// MARK: - Sub-Configurations
+// MARK: - ClientConfig
 
 /// Client-wide HTTP configuration.
 public struct ClientConfig: Sendable {
@@ -156,6 +158,8 @@ public struct ClientConfig: Sendable {
     }
 }
 
+// MARK: - FaucetConfig
+
 /// Faucet-specific configuration.
 public struct FaucetConfig: Sendable {
     /// Auth token for the faucet service.
@@ -169,6 +173,8 @@ public struct FaucetConfig: Sendable {
         self.headers = headers
     }
 }
+
+// MARK: - TransactionGenerationConfig
 
 /// Transaction generation defaults.
 public struct TransactionGenerationConfig: Sendable {

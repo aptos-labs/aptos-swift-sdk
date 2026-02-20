@@ -1,5 +1,7 @@
-import Foundation
 import BigInt
+import Foundation
+
+// MARK: - Deserializer
 
 /// BCS (Binary Canonical Serialization) decoder.
 ///
@@ -13,21 +15,21 @@ public struct Deserializer: ~Copyable, Sendable {
     private var offset: Int
 
     /// Maximum deserializable byte array length (10 MB).
-    public static let maxLength: Int = 10 * 1024 * 1024
+    public static let maxLength = 10 * 1024 * 1024
 
     /// Maximum nesting depth for recursive types.
-    public static let maxDepth: Int = 128
+    public static let maxDepth = 128
 
     /// Creates a new deserializer for the given data.
     public init(data: Data) {
         self.data = data
-        self.offset = 0
+        offset = 0
     }
 
     /// Creates a new deserializer from a byte array.
     public init(bytes: [UInt8]) {
-        self.data = Data(bytes)
-        self.offset = 0
+        data = Data(bytes)
+        offset = 0
     }
 
     /// Returns the number of remaining bytes.
@@ -131,7 +133,8 @@ public struct Deserializer: ~Copyable, Sendable {
         let length = Int(try deserializeUleb128())
         guard length <= Self.maxLength else {
             throw AptosError.serialization(.maxLengthExceeded(
-                "Byte array length \(length) exceeds max \(Self.maxLength)"))
+                "Byte array length \(length) exceeds max \(Self.maxLength)"
+            ))
         }
         return try readBytes(count: length)
     }
@@ -155,7 +158,8 @@ public struct Deserializer: ~Copyable, Sendable {
             if byte & 0x80 == 0 {
                 guard value <= UInt64(UInt32.max) else {
                     throw AptosError.serialization(.outOfRange(
-                        "ULEB128 value \(value) exceeds UInt32.max"))
+                        "ULEB128 value \(value) exceeds UInt32.max"
+                    ))
                 }
                 return UInt32(value)
             }
@@ -168,7 +172,7 @@ public struct Deserializer: ~Copyable, Sendable {
     // MARK: - Composites
 
     /// Deserializes an optional value.
-    public mutating func deserializeOption<T: BCSDeserializable>(_ type: T.Type) throws -> T? {
+    public mutating func deserializeOption<T: BCSDeserializable>(_: T.Type) throws -> T? {
         let hasValue = try deserializeBool()
         if hasValue {
             return try T.deserialize(from: &self)
@@ -177,11 +181,11 @@ public struct Deserializer: ~Copyable, Sendable {
     }
 
     /// Deserializes a vector (array) of deserializable values.
-    public mutating func deserializeVector<T: BCSDeserializable>(_ type: T.Type) throws -> [T] {
+    public mutating func deserializeVector<T: BCSDeserializable>(_: T.Type) throws -> [T] {
         let count = Int(try deserializeUleb128())
         var result = [T]()
         result.reserveCapacity(count)
-        for _ in 0..<count {
+        for _ in 0 ..< count {
             result.append(try T.deserialize(from: &self))
         }
         return result
@@ -192,7 +196,8 @@ public struct Deserializer: ~Copyable, Sendable {
     private mutating func readByte() throws -> UInt8 {
         guard offset < data.count else {
             throw AptosError.serialization(.unexpectedEnd(
-                "Expected 1 byte at offset \(offset), but only \(remaining) bytes remain"))
+                "Expected 1 byte at offset \(offset), but only \(remaining) bytes remain"
+            ))
         }
         let byte = data[offset]
         offset += 1
@@ -202,9 +207,10 @@ public struct Deserializer: ~Copyable, Sendable {
     private mutating func readBytes(count: Int) throws -> Data {
         guard offset + count <= data.count else {
             throw AptosError.serialization(.unexpectedEnd(
-                "Expected \(count) bytes at offset \(offset), but only \(remaining) bytes remain"))
+                "Expected \(count) bytes at offset \(offset), but only \(remaining) bytes remain"
+            ))
         }
-        let bytes = data[offset..<(offset + count)]
+        let bytes = data[offset ..< (offset + count)]
         offset += count
         return Data(bytes)
     }

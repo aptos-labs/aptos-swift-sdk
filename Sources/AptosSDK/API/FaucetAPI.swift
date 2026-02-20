@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - FaucetAPI
+
 /// Faucet operations for test networks.
 public struct FaucetAPI: Sendable {
     private let config: AptosConfig
@@ -20,6 +22,8 @@ public struct FaucetAPI: Sendable {
         return try await client.post(url: url, path: "fund", body: body, apiType: .faucet)
     }
 }
+
+// MARK: - FaucetFundRequest
 
 private struct FaucetFundRequest: Encodable {
     let address: String

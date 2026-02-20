@@ -1,5 +1,7 @@
-import Foundation
 import BigInt
+import Foundation
+
+// MARK: - Serializer
 
 /// BCS (Binary Canonical Serialization) encoder.
 ///
@@ -10,13 +12,13 @@ public struct Serializer: ~Copyable, Sendable {
     private var buffer: Data
 
     /// Maximum serializable byte array length (10 MB).
-    public static let maxLength: Int = 10 * 1024 * 1024
+    public static let maxLength = 10 * 1024 * 1024
 
     /// Maximum ULEB128 value.
-    public static let maxULEB128: UInt32 = UInt32.max
+    public static let maxULEB128 = UInt32.max
 
     /// Maximum nesting depth for recursive types.
-    public static let maxDepth: Int = 128
+    public static let maxDepth = 128
 
     /// Creates a new serializer with the specified initial capacity.
     public init(capacity: Int = 64) {
@@ -110,7 +112,8 @@ public struct Serializer: ~Copyable, Sendable {
         let length = value.count
         guard length <= Self.maxLength else {
             throw AptosError.serialization(.maxLengthExceeded(
-                "Byte array length \(length) exceeds max \(Self.maxLength)"))
+                "Byte array length \(length) exceeds max \(Self.maxLength)"
+            ))
         }
         try serializeU32AsUleb128(UInt32(length))
         buffer.append(contentsOf: value)
@@ -136,7 +139,7 @@ public struct Serializer: ~Copyable, Sendable {
     // MARK: - Composites
 
     /// Serializes an optional value: 0x00 for nil, 0x01 + serialized value for some.
-    public mutating func serializeOption<T: BCSSerializable>(_ value: T?) throws {
+    public mutating func serializeOption(_ value: (some BCSSerializable)?) throws {
         if let value {
             serializeBool(true)
             try value.serialize(to: &self)
@@ -146,7 +149,7 @@ public struct Serializer: ~Copyable, Sendable {
     }
 
     /// Serializes a vector (array) as ULEB128 count + serialized elements.
-    public mutating func serializeVector<T: BCSSerializable>(_ values: [T]) throws {
+    public mutating func serializeVector(_ values: [some BCSSerializable]) throws {
         try serializeU32AsUleb128(UInt32(values.count))
         for value in values {
             try value.serialize(to: &self)
@@ -166,7 +169,7 @@ extension BigUInt {
     func littleEndianData(count: Int) -> Data {
         var result = Data(repeating: 0, count: count)
         var value = self
-        for i in 0..<count {
+        for i in 0 ..< count {
             result[i] = UInt8(value & 0xFF)
             value >>= 8
         }

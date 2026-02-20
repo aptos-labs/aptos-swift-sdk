@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import AptosSDK
 
 @Suite("Secp256r1 Tests")
@@ -76,7 +76,7 @@ struct Secp256r1Tests {
         var compressed = Data()
         let yLastByte = uncompressedData[uncompressedData.count - 1]
         compressed.append(yLastByte % 2 == 0 ? 0x02 : 0x03)
-        compressed.append(uncompressedData[1..<33]) // x coordinate
+        compressed.append(uncompressedData[1 ..< 33]) // x coordinate
 
         // Should accept compressed format
         let fromCompressed = try Secp256r1PublicKey(data: compressed)

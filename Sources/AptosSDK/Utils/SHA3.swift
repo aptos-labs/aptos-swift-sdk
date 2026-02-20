@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - SHA3
+
 /// SHA3-256 (Keccak-256 with NIST padding) implementation.
 ///
 /// This is a minimal, dependency-free implementation of SHA3-256 used
@@ -31,30 +33,30 @@ public enum SHA3 {
     }
 }
 
-// MARK: - Keccak State
+// MARK: - KeccakState
 
 /// Keccak-f[1600] permutation state for SHA3.
 private struct KeccakState {
     var state: [UInt64] = Array(repeating: 0, count: 25)
 
-    // Round constants for Keccak-f[1600]
+    /// Round constants for Keccak-f[1600]
     static let roundConstants: [UInt64] = [
-        0x0000000000000001, 0x0000000000008082, 0x800000000000808A, 0x8000000080008000,
-        0x000000000000808B, 0x0000000080000001, 0x8000000080008081, 0x8000000000008009,
-        0x000000000000008A, 0x0000000000000088, 0x0000000080008009, 0x000000008000000A,
-        0x000000008000808B, 0x800000000000008B, 0x8000000000008089, 0x8000000000008003,
-        0x8000000000008002, 0x8000000000000080, 0x000000000000800A, 0x800000008000000A,
-        0x8000000080008081, 0x8000000000008080, 0x0000000080000001, 0x8000000080008008,
+        0x0000_0000_0000_0001, 0x0000_0000_0000_8082, 0x8000_0000_0000_808A, 0x8000_0000_8000_8000,
+        0x0000_0000_0000_808B, 0x0000_0000_8000_0001, 0x8000_0000_8000_8081, 0x8000_0000_0000_8009,
+        0x0000_0000_0000_008A, 0x0000_0000_0000_0088, 0x0000_0000_8000_8009, 0x0000_0000_8000_000A,
+        0x0000_0000_8000_808B, 0x8000_0000_0000_008B, 0x8000_0000_0000_8089, 0x8000_0000_0000_8003,
+        0x8000_0000_0000_8002, 0x8000_0000_0000_0080, 0x0000_0000_0000_800A, 0x8000_0000_8000_000A,
+        0x8000_0000_8000_8081, 0x8000_0000_0000_8080, 0x0000_0000_8000_0001, 0x8000_0000_8000_8008,
     ]
 
-    // Rotation offsets
+    /// Rotation offsets
     static let rotationOffsets: [Int] = [
         0, 1, 62, 28, 27, 36, 44, 6, 55, 20,
         3, 10, 43, 25, 39, 41, 45, 15, 21, 8,
         18, 2, 61, 56, 14,
     ]
 
-    // Pi permutation indices
+    /// Pi permutation indices
     static let piIndices: [Int] = [
         0, 10, 20, 5, 15, 16, 1, 11, 21, 6,
         7, 17, 2, 12, 22, 23, 8, 18, 3, 13,
@@ -67,13 +69,13 @@ private struct KeccakState {
 
         while offset < input.count {
             let blockEnd = min(offset + blockSize, input.count)
-            let block = Array(input[offset..<blockEnd])
+            let block = Array(input[offset ..< blockEnd])
 
             // XOR block into state
-            for i in 0..<(block.count / 8) {
+            for i in 0 ..< (block.count / 8) {
                 let word = block.withUnsafeBufferPointer { buf -> UInt64 in
                     var value: UInt64 = 0
-                    for j in 0..<8 {
+                    for j in 0 ..< 8 {
                         let idx = i * 8 + j
                         if idx < buf.count {
                             value |= UInt64(buf[idx]) << (j * 8)
@@ -89,7 +91,7 @@ private struct KeccakState {
             let remainingStart = fullWords * 8
             if remainingStart < block.count {
                 var word: UInt64 = 0
-                for j in remainingStart..<block.count {
+                for j in remainingStart ..< block.count {
                     word |= UInt64(block[j]) << ((j - remainingStart) * 8)
                 }
                 state[fullWords] ^= word
@@ -115,10 +117,10 @@ private struct KeccakState {
 
         while remaining > 0 {
             let blockBytes = min(remaining, rate)
-            for i in 0..<(blockBytes / 8) {
+            for i in 0 ..< (blockBytes / 8) {
                 var word = state[i]
                 let bytesToWrite = min(8, remaining)
-                for _ in 0..<bytesToWrite {
+                for _ in 0 ..< bytesToWrite {
                     output.append(UInt8(word & 0xFF))
                     word >>= 8
                     remaining -= 1
@@ -133,7 +135,7 @@ private struct KeccakState {
                 if fullWords < rate / 8 {
                     var word = state[fullWords]
                     let bytesToWrite = min(blockBytes - fullWords * 8, remaining)
-                    for _ in 0..<bytesToWrite {
+                    for _ in 0 ..< bytesToWrite {
                         output.append(UInt8(word & 0xFF))
                         word >>= 8
                         remaining -= 1
@@ -150,33 +152,33 @@ private struct KeccakState {
     }
 
     mutating func keccakF() {
-        for round in 0..<24 {
+        for round in 0 ..< 24 {
             // θ (Theta)
             var c = [UInt64](repeating: 0, count: 5)
-            for x in 0..<5 {
+            for x in 0 ..< 5 {
                 c[x] = state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20]
             }
 
             var d = [UInt64](repeating: 0, count: 5)
-            for x in 0..<5 {
+            for x in 0 ..< 5 {
                 d[x] = c[(x + 4) % 5] ^ rotl64(c[(x + 1) % 5], 1)
             }
 
-            for x in 0..<5 {
-                for y in 0..<5 {
+            for x in 0 ..< 5 {
+                for y in 0 ..< 5 {
                     state[x + 5 * y] ^= d[x]
                 }
             }
 
             // ρ (Rho) and π (Pi)
             var b = [UInt64](repeating: 0, count: 25)
-            for i in 0..<25 {
+            for i in 0 ..< 25 {
                 b[Self.piIndices[i]] = rotl64(state[i], Self.rotationOffsets[i])
             }
 
             // χ (Chi)
-            for y in 0..<5 {
-                for x in 0..<5 {
+            for y in 0 ..< 5 {
+                for x in 0 ..< 5 {
                     state[x + 5 * y] = b[x + 5 * y] ^ (~b[(x + 1) % 5 + 5 * y] & b[(x + 2) % 5 + 5 * y])
                 }
             }

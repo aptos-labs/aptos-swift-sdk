@@ -1,11 +1,11 @@
-import Testing
 import Foundation
+import Testing
 @testable import AptosSDK
 
 @Suite("BCS Serializer Tests")
 struct SerializerTests {
     @Test("Serialize bool")
-    func serializeBool() throws {
+    func serializeBool() {
         var s = Serializer()
         s.serializeBool(true)
         let bytes = s.toBytes()
@@ -18,7 +18,7 @@ struct SerializerTests {
     }
 
     @Test("Serialize u8")
-    func serializeU8() throws {
+    func serializeU8() {
         var s = Serializer()
         s.serializeU8(255)
         let bytes = s.toBytes()
@@ -26,7 +26,7 @@ struct SerializerTests {
     }
 
     @Test("Serialize u16")
-    func serializeU16() throws {
+    func serializeU16() {
         var s = Serializer()
         s.serializeU16(0x0102)
         let bytes = s.toBytes()
@@ -34,17 +34,17 @@ struct SerializerTests {
     }
 
     @Test("Serialize u32")
-    func serializeU32() throws {
+    func serializeU32() {
         var s = Serializer()
-        s.serializeU32(0x01020304)
+        s.serializeU32(0x0102_0304)
         let bytes = s.toBytes()
         #expect(bytes == Data([0x04, 0x03, 0x02, 0x01]))
     }
 
     @Test("Serialize u64")
-    func serializeU64() throws {
+    func serializeU64() {
         var s = Serializer()
-        s.serializeU64(0x0102030405060708)
+        s.serializeU64(0x0102_0304_0506_0708)
         let bytes = s.toBytes()
         #expect(bytes == Data([0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]))
     }
@@ -75,7 +75,7 @@ struct SerializerTests {
     }
 
     @Test("Serialize fixed bytes without prefix")
-    func serializeFixedBytes() throws {
+    func serializeFixedBytes() {
         var s = Serializer()
         s.serializeFixedBytes([0xAB, 0xCD])
         let bytes = s.toBytes()
@@ -101,7 +101,7 @@ struct SerializerTests {
     }
 
     @Test("Serialize signed integers")
-    func serializeSignedIntegers() throws {
+    func serializeSignedIntegers() {
         var s = Serializer()
         s.serializeI8(-1)
         #expect(s.toBytes() == Data([0xFF]))
@@ -120,7 +120,7 @@ struct SerializerTests {
     }
 
     @Test("Multiple serializations to same serializer")
-    func multipleSerializations() throws {
+    func multipleSerializations() {
         var s = Serializer()
         s.serializeBool(true)
         s.serializeU8(42)

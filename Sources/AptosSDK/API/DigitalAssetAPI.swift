@@ -9,7 +9,7 @@ public struct DigitalAssetAPI: Sendable {
     init(config: AptosConfig, client: AptosHTTPClient) {
         self.config = config
         self.client = client
-        self.transactionAPI = TransactionAPI(config: config, client: client)
+        transactionAPI = TransactionAPI(config: config, client: client)
     }
 
     /// Creates a new collection.
@@ -44,7 +44,8 @@ public struct DigitalAssetAPI: Sendable {
         ))
 
         return try await transactionAPI.submitAndWait(
-            sender: creator, payload: payload, options: options)
+            sender: creator, payload: payload, options: options
+        )
     }
 
     /// Mints a token in a collection.
@@ -78,6 +79,7 @@ public struct DigitalAssetAPI: Sendable {
         ))
 
         return try await transactionAPI.submitAndWait(
-            sender: creator, payload: payload, options: options)
+            sender: creator, payload: payload, options: options
+        )
     }
 }

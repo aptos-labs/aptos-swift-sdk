@@ -1,20 +1,20 @@
 import Foundation
 
-extension Data {
+public extension Data {
     /// Returns a hex string representation of this data with "0x" prefix.
-    public var hexString: String {
+    var hexString: String {
         Hex.encode(self)
     }
 
     /// Creates Data from a hex string.
-    public static func fromHex(_ hex: String) throws -> Data {
+    static func fromHex(_ hex: String) throws -> Data {
         try Hex.decode(hex)
     }
 }
 
-extension String {
+public extension String {
     /// Returns true if this string has a "0x" or "0X" prefix.
-    public var hasHexPrefix: Bool {
+    var hasHexPrefix: Bool {
         hasPrefix("0x") || hasPrefix("0X")
     }
 }

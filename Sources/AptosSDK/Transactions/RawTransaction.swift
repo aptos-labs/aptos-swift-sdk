@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - RawTransaction
+
 /// A raw (unsigned) transaction ready for signing.
 public struct RawTransaction: Sendable, Equatable {
     public let sender: AccountAddress
@@ -38,6 +40,8 @@ public struct RawTransaction: Sendable, Equatable {
     }
 }
 
+// MARK: BCSSerializable, BCSDeserializable
+
 extension RawTransaction: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         try sender.serialize(to: &serializer)
@@ -75,10 +79,12 @@ public struct ChainId: Sendable, Equatable, Hashable {
         self.value = value
     }
 
-    public static let mainnet = ChainId(1)
-    public static let testnet = ChainId(2)
-    public static let local = ChainId(4)
+    public static let mainnet = Self(1)
+    public static let testnet = Self(2)
+    public static let local = Self(4)
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension ChainId: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -90,7 +96,7 @@ extension ChainId: BCSSerializable, BCSDeserializable {
     }
 }
 
-// MARK: - Signed Transaction
+// MARK: - SignedTransaction
 
 /// A signed transaction ready for submission.
 public struct SignedTransaction: Sendable, Equatable {
@@ -113,11 +119,13 @@ public struct SignedTransaction: Sendable, Equatable {
         // Transaction enum variant 0 = UserTransaction
         var serializer = Serializer()
         try serializer.serializeU32AsUleb128(0)
-        try self.serialize(to: &serializer)
+        try serialize(to: &serializer)
         let bcs = serializer.toBytes()
         return AptosHashing.sha3_256(prefix + bcs)
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension SignedTransaction: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -132,14 +140,18 @@ extension SignedTransaction: BCSSerializable, BCSDeserializable {
     }
 }
 
-// MARK: - Raw Transaction with Data (for multi-agent/fee-payer signing)
+// MARK: - RawTransactionWithData
 
 /// Extended raw transaction used for multi-agent and fee-payer signing messages.
 public enum RawTransactionWithData: Sendable, Equatable {
     /// Multi-agent variant (index 0).
     case multiAgent(rawTransaction: RawTransaction, secondarySignerAddresses: [AccountAddress])
     /// Fee payer variant (index 1).
-    case feePayer(rawTransaction: RawTransaction, secondarySignerAddresses: [AccountAddress], feePayerAddress: AccountAddress)
+    case feePayer(
+        rawTransaction: RawTransaction,
+        secondarySignerAddresses: [AccountAddress],
+        feePayerAddress: AccountAddress
+    )
 
     /// Computes the signing message for multi-agent/fee-payer transactions.
     public func signingMessage() throws -> Data {
@@ -149,14 +161,16 @@ public enum RawTransactionWithData: Sendable, Equatable {
     }
 }
 
+// MARK: BCSSerializable, BCSDeserializable
+
 extension RawTransactionWithData: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         switch self {
-        case .multiAgent(let rawTxn, let addrs):
+        case let .multiAgent(rawTxn, addrs):
             try serializer.serializeU32AsUleb128(0)
             try rawTxn.serialize(to: &serializer)
             try serializer.serializeVector(addrs)
-        case .feePayer(let rawTxn, let addrs, let feeAddr):
+        case let .feePayer(rawTxn, addrs, feeAddr):
             try serializer.serializeU32AsUleb128(1)
             try rawTxn.serialize(to: &serializer)
             try serializer.serializeVector(addrs)
@@ -178,7 +192,8 @@ extension RawTransactionWithData: BCSSerializable, BCSDeserializable {
             return .feePayer(rawTransaction: raw, secondarySignerAddresses: addrs, feePayerAddress: feeAddr)
         default:
             throw AptosError.serialization(.invalidData(
-                "Unknown RawTransactionWithData variant: \(variant)"))
+                "Unknown RawTransactionWithData variant: \(variant)"
+            ))
         }
     }
 }

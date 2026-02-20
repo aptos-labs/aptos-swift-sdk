@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import AptosSDK
 
 @Suite("Fee Payer Tests")
@@ -15,7 +15,7 @@ struct FeePayerTests {
             )),
             maxGasAmount: 200_000,
             gasUnitPrice: 100,
-            expirationTimestampSecs: 1000000,
+            expirationTimestampSecs: 1_000_000,
             chainId: .testnet
         )
 
@@ -40,7 +40,7 @@ struct FeePayerTests {
             )),
             maxGasAmount: 200_000,
             gasUnitPrice: 100,
-            expirationTimestampSecs: 1000000,
+            expirationTimestampSecs: 1_000_000,
             chainId: .testnet
         )
 
@@ -81,7 +81,7 @@ struct FeePayerTests {
             )),
             maxGasAmount: 200_000,
             gasUnitPrice: 100,
-            expirationTimestampSecs: 1000000,
+            expirationTimestampSecs: 1_000_000,
             chainId: .testnet
         )
 
@@ -97,7 +97,7 @@ struct FeePayerTests {
         )
 
         // Should produce fee payer authenticator
-        if case .feePayer(_, let addrs, let signers, let feeAddr, _) = signed.authenticator {
+        if case let .feePayer(_, addrs, signers, feeAddr, _) = signed.authenticator {
             #expect(addrs.isEmpty) // No secondary signers
             #expect(signers.isEmpty)
             #expect(feeAddr == feePayer.accountAddress)
@@ -107,7 +107,7 @@ struct FeePayerTests {
 
         // Should be serializable
         let bcs = try signed.toBytes()
-        #expect(bcs.count > 0)
+        #expect(!bcs.isEmpty)
     }
 
     @Test("Transaction without fee payer address throws")
@@ -124,7 +124,7 @@ struct FeePayerTests {
             )),
             maxGasAmount: 200_000,
             gasUnitPrice: 100,
-            expirationTimestampSecs: 1000000,
+            expirationTimestampSecs: 1_000_000,
             chainId: .testnet
         )
 

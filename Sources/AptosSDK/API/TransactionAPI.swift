@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - TransactionAPI
+
 /// Transaction building, signing, submission, and querying.
 public struct TransactionAPI: Sendable {
     private let config: AptosConfig
@@ -26,7 +28,8 @@ public struct TransactionAPI: Sendable {
             seqNum = provided
         } else {
             let accountData: AccountData = try await client.get(
-                url: url, path: "accounts/\(sender.toHex())")
+                url: url, path: "accounts/\(sender.toHex())"
+            )
             seqNum = UInt64(accountData.sequenceNumber) ?? 0
         }
 
@@ -93,9 +96,11 @@ public struct TransactionAPI: Sendable {
         transaction: SimpleTransaction
     ) async throws -> PendingTransactionResponse {
         let auth = try TransactionSigner.sign(
-            transaction: .simple(transaction), signer: signer)
+            transaction: .simple(transaction), signer: signer
+        )
         let signed = try TransactionSigner.createSignedTransaction(
-            transaction: transaction, senderAuthenticator: auth)
+            transaction: transaction, senderAuthenticator: auth
+        )
         return try await submit(signedTransaction: signed)
     }
 
@@ -115,7 +120,8 @@ public struct TransactionAPI: Sendable {
         while Date().timeIntervalSince(startTime) < timeout {
             do {
                 let txn: TransactionResponse = try await client.get(
-                    url: url, path: "transactions/by_hash/\(hash)")
+                    url: url, path: "transactions/by_hash/\(hash)"
+                )
 
                 if !txn.isPending {
                     if checkSuccess, txn.success == false {
@@ -127,7 +133,7 @@ public struct TransactionAPI: Sendable {
                     return txn
                 }
             } catch let error as AptosError {
-                if case .network(.httpError(let code, _)) = error {
+                if case let .network(.httpError(code, _)) = error {
                     if code == 404 || code >= 500 {
                         // Retryable
                     } else {
@@ -152,7 +158,8 @@ public struct TransactionAPI: Sendable {
         options: TransactionOptions = TransactionOptions()
     ) async throws -> TransactionResponse {
         let txn = try await buildSimple(
-            sender: sender.accountAddress, payload: payload, options: options)
+            sender: sender.accountAddress, payload: payload, options: options
+        )
         let pending = try await signAndSubmit(signer: sender, transaction: txn)
         return try await waitForTransaction(hash: pending.hash)
     }
@@ -182,7 +189,8 @@ public struct TransactionAPI: Sendable {
         if let start { params["start"] = String(start) }
         if let limit { params["limit"] = String(limit) }
         return try await client.get(
-            url: url, path: "accounts/\(address.toHex())/transactions", params: params)
+            url: url, path: "accounts/\(address.toHex())/transactions", params: params
+        )
     }
 
     // MARK: - Simulate
@@ -190,7 +198,7 @@ public struct TransactionAPI: Sendable {
     /// Simulates a transaction without actually submitting it.
     public func simulate(
         transaction: AnyRawTransaction,
-        signerPublicKey: (any BCSSerializable)? = nil
+        signerPublicKey _: (any BCSSerializable)? = nil
     ) async throws -> [TransactionResponse] {
         let url = try config.getFullnodeURL()
 
@@ -201,9 +209,12 @@ public struct TransactionAPI: Sendable {
         let bcsBytes = try signedTxn.toBytes()
 
         return try await client.postBCS(
-            url: url, path: "transactions/simulate", body: bcsBytes)
+            url: url, path: "transactions/simulate", body: bcsBytes
+        )
     }
 }
+
+// MARK: - TransactionOptions
 
 /// Options for transaction building.
 public struct TransactionOptions: Sendable {

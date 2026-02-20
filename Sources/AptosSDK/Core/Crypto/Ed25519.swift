@@ -1,5 +1,7 @@
-import Foundation
 import CryptoKit
+import Foundation
+
+// MARK: - Ed25519PublicKey
 
 /// Ed25519 public key (32 bytes).
 public struct Ed25519PublicKey: Sendable, Equatable, Hashable {
@@ -18,9 +20,9 @@ public struct Ed25519PublicKey: Sendable, Equatable, Hashable {
     }
 
     /// Creates from a hex string.
-    public static func fromHex(_ hex: String) throws -> Ed25519PublicKey {
+    public static func fromHex(_ hex: String) throws -> Self {
         let data = try Hex.decode(hex)
-        return try Ed25519PublicKey(data: data)
+        return try Self(data: data)
     }
 
     /// Verifies a signature over a message.
@@ -37,6 +39,8 @@ public struct Ed25519PublicKey: Sendable, Equatable, Hashable {
     }
 }
 
+// MARK: BCSSerializable, BCSDeserializable
+
 extension Ed25519PublicKey: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         try serializer.serializeBytes(data)
@@ -48,6 +52,8 @@ extension Ed25519PublicKey: BCSSerializable, BCSDeserializable {
     }
 }
 
+// MARK: - Ed25519PrivateKey
+
 /// Ed25519 private key (32 bytes).
 ///
 /// Private keys do not conform to `CustomStringConvertible` to prevent
@@ -58,9 +64,9 @@ public struct Ed25519PrivateKey: Sendable, Equatable {
     public static let length = 32
 
     /// Generates a new random private key.
-    public static func generate() -> Ed25519PrivateKey {
+    public static func generate() -> Self {
         let key = Curve25519.Signing.PrivateKey()
-        return Ed25519PrivateKey(unchecked: Data(key.rawRepresentation))
+        return Self(unchecked: Data(key.rawRepresentation))
     }
 
     /// Creates from raw bytes (32-byte seed).
@@ -72,13 +78,13 @@ public struct Ed25519PrivateKey: Sendable, Equatable {
     }
 
     /// Creates from a hex string.
-    public static func fromHex(_ hex: String) throws -> Ed25519PrivateKey {
+    public static func fromHex(_ hex: String) throws -> Self {
         let data = try Hex.decode(hex)
-        return try Ed25519PrivateKey(data: data)
+        return try Self(data: data)
     }
 
     /// Creates from an AIP-80 formatted string ("ed25519-priv-<hex>").
-    public static func fromAIP80(_ aip80: String) throws -> Ed25519PrivateKey {
+    public static func fromAIP80(_ aip80: String) throws -> Self {
         let prefix = "ed25519-priv-"
         guard aip80.hasPrefix(prefix) else {
             throw AptosError.crypto(.invalidPrivateKey("Invalid AIP-80 format for Ed25519"))
@@ -105,11 +111,13 @@ public struct Ed25519PrivateKey: Sendable, Equatable {
         return try Ed25519Signature(data: Data(sig))
     }
 
-    // Internal init that skips validation (for generate).
+    /// Internal init that skips validation (for generate).
     private init(unchecked data: Data) {
         self.data = data
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension Ed25519PrivateKey: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -121,6 +129,8 @@ extension Ed25519PrivateKey: BCSSerializable, BCSDeserializable {
         return try Ed25519PrivateKey(data: bytes)
     }
 }
+
+// MARK: - Ed25519Signature
 
 /// Ed25519 signature (64 bytes).
 public struct Ed25519Signature: Sendable, Equatable {
@@ -137,9 +147,9 @@ public struct Ed25519Signature: Sendable, Equatable {
     }
 
     /// Creates from a hex string.
-    public static func fromHex(_ hex: String) throws -> Ed25519Signature {
+    public static func fromHex(_ hex: String) throws -> Self {
         let data = try Hex.decode(hex)
-        return try Ed25519Signature(data: data)
+        return try Self(data: data)
     }
 
     /// Returns the hex string representation with "0x" prefix.
@@ -147,6 +157,8 @@ public struct Ed25519Signature: Sendable, Equatable {
         Hex.encode(data)
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension Ed25519Signature: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {

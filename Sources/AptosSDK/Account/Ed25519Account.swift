@@ -16,25 +16,25 @@ public struct Ed25519Account: AptosAccount, Sendable {
     /// Creates an account from an existing private key.
     public init(privateKey: Ed25519PrivateKey, address: AccountAddress? = nil) throws {
         self.privateKey = privateKey
-        self.publicKey = try privateKey.publicKey()
+        publicKey = try privateKey.publicKey()
         if let address {
-            self.accountAddress = address
+            accountAddress = address
         } else {
-            let authKey = AuthenticationKey.fromEd25519(publicKey: self.publicKey)
-            self.accountAddress = authKey.accountAddress()
+            let authKey = AuthenticationKey.fromEd25519(publicKey: publicKey)
+            accountAddress = authKey.accountAddress()
         }
     }
 
     /// Generates a new random Ed25519 account.
-    public static func generate() throws -> Ed25519Account {
+    public static func generate() throws -> Self {
         let privateKey = Ed25519PrivateKey.generate()
-        return try Ed25519Account(privateKey: privateKey)
+        return try Self(privateKey: privateKey)
     }
 
     /// Creates from a hex private key string.
-    public static func fromPrivateKey(_ hex: String) throws -> Ed25519Account {
+    public static func fromPrivateKey(_ hex: String) throws -> Self {
         let key = try Ed25519PrivateKey.fromHex(hex)
-        return try Ed25519Account(privateKey: key)
+        return try Self(privateKey: key)
     }
 
     // MARK: - AptosAccount

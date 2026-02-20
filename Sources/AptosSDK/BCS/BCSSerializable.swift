@@ -1,10 +1,14 @@
 import Foundation
 
+// MARK: - BCSSerializable
+
 /// A type that can be serialized to BCS format.
 public protocol BCSSerializable: Sendable {
     /// Serializes this value into the given serializer.
     func serialize(to serializer: inout Serializer) throws
 }
+
+// MARK: - BCSDeserializable
 
 /// A type that can be deserialized from BCS format.
 public protocol BCSDeserializable: Sendable {
@@ -13,26 +17,26 @@ public protocol BCSDeserializable: Sendable {
 }
 
 /// A type that supports both BCS serialization and deserialization.
-public typealias BCSCodable = BCSSerializable & BCSDeserializable
+public typealias BCSCodable = BCSDeserializable & BCSSerializable
 
 // MARK: - Top-level Helpers
 
 /// Serializes a BCS-serializable value to bytes.
-public func bcsToBytes<T: BCSSerializable>(_ value: T) throws -> Data {
+public func bcsToBytes(_ value: some BCSSerializable) throws -> Data {
     var serializer = Serializer()
     try value.serialize(to: &serializer)
     return serializer.toBytes()
 }
 
 /// Deserializes a BCS-encoded value from bytes.
-public func bcsFromBytes<T: BCSDeserializable>(_ type: T.Type, _ data: Data) throws -> T {
+public func bcsFromBytes<T: BCSDeserializable>(_: T.Type, _ data: Data) throws -> T {
     var deserializer = Deserializer(data: data)
     let value = try T.deserialize(from: &deserializer)
     try deserializer.assertFinished()
     return value
 }
 
-// MARK: - Standard Type Conformances
+// MARK: - Bool + BCSSerializable, BCSDeserializable
 
 extension Bool: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -44,6 +48,8 @@ extension Bool: BCSSerializable, BCSDeserializable {
     }
 }
 
+// MARK: - UInt8 + BCSSerializable, BCSDeserializable
+
 extension UInt8: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         serializer.serializeU8(self)
@@ -53,6 +59,8 @@ extension UInt8: BCSSerializable, BCSDeserializable {
         try deserializer.deserializeU8()
     }
 }
+
+// MARK: - UInt16 + BCSSerializable, BCSDeserializable
 
 extension UInt16: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -64,6 +72,8 @@ extension UInt16: BCSSerializable, BCSDeserializable {
     }
 }
 
+// MARK: - UInt32 + BCSSerializable, BCSDeserializable
+
 extension UInt32: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         serializer.serializeU32(self)
@@ -73,6 +83,8 @@ extension UInt32: BCSSerializable, BCSDeserializable {
         try deserializer.deserializeU32()
     }
 }
+
+// MARK: - UInt64 + BCSSerializable, BCSDeserializable
 
 extension UInt64: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -84,6 +96,8 @@ extension UInt64: BCSSerializable, BCSDeserializable {
     }
 }
 
+// MARK: - Int8 + BCSSerializable, BCSDeserializable
+
 extension Int8: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         serializer.serializeI8(self)
@@ -93,6 +107,8 @@ extension Int8: BCSSerializable, BCSDeserializable {
         try deserializer.deserializeI8()
     }
 }
+
+// MARK: - Int16 + BCSSerializable, BCSDeserializable
 
 extension Int16: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -104,6 +120,8 @@ extension Int16: BCSSerializable, BCSDeserializable {
     }
 }
 
+// MARK: - Int32 + BCSSerializable, BCSDeserializable
+
 extension Int32: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         serializer.serializeI32(self)
@@ -113,6 +131,8 @@ extension Int32: BCSSerializable, BCSDeserializable {
         try deserializer.deserializeI32()
     }
 }
+
+// MARK: - Int64 + BCSSerializable, BCSDeserializable
 
 extension Int64: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -124,6 +144,8 @@ extension Int64: BCSSerializable, BCSDeserializable {
     }
 }
 
+// MARK: - String + BCSSerializable, BCSDeserializable
+
 extension String: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         try serializer.serializeStr(self)
@@ -133,6 +155,8 @@ extension String: BCSSerializable, BCSDeserializable {
         try deserializer.deserializeStr()
     }
 }
+
+// MARK: - Data + BCSSerializable, BCSDeserializable
 
 extension Data: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {

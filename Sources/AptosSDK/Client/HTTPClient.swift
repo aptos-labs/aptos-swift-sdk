@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - AptosAPIType
+
 /// API type for routing requests.
 public enum AptosAPIType: String, Sendable {
     case fullnode = "Fullnode"
@@ -8,6 +10,8 @@ public enum AptosAPIType: String, Sendable {
     case pepper = "Pepper"
     case prover = "Prover"
 }
+
+// MARK: - AptosHTTPClient
 
 /// Actor-based HTTP client for Aptos API requests.
 public actor AptosHTTPClient {
@@ -21,7 +25,7 @@ public actor AptosHTTPClient {
         urlConfig.httpAdditionalHeaders = [
             "User-Agent": AptosConstants.userAgent,
         ]
-        self.session = URLSession(configuration: urlConfig)
+        session = URLSession(configuration: urlConfig)
     }
 
     // MARK: - JSON Requests
@@ -41,10 +45,10 @@ public actor AptosHTTPClient {
     }
 
     /// Performs a POST request with a JSON body and decodes the response.
-    public func post<B: Encodable & Sendable, T: Decodable & Sendable>(
+    public func post<T: Decodable & Sendable>(
         url: String,
         path: String = "",
-        body: B,
+        body: some Encodable & Sendable,
         apiType: AptosAPIType = .fullnode
     ) async throws -> T {
         var request = try buildRequest(
@@ -168,7 +172,8 @@ public actor AptosHTTPClient {
             return try decoder.decode(T.self, from: data)
         } catch {
             throw AptosError.api(.decodingError(
-                "Failed to decode \(T.self): \(error.localizedDescription)"))
+                "Failed to decode \(T.self): \(error.localizedDescription)"
+            ))
         }
     }
 
@@ -178,20 +183,21 @@ public actor AptosHTTPClient {
         }
 
         let statusCode = httpResponse.statusCode
-        guard (200..<300).contains(statusCode) else {
+        guard (200 ..< 300).contains(statusCode) else {
             // Try to parse error body
-            let message: String
-            if let errorBody = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
-                message = errorBody.message
+            let message: String = if let errorBody = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                errorBody.message
             } else if let bodyStr = String(data: data, encoding: .utf8) {
-                message = bodyStr
+                bodyStr
             } else {
-                message = "HTTP \(statusCode)"
+                "HTTP \(statusCode)"
             }
             throw AptosError.network(.httpError(statusCode: statusCode, message: message))
         }
     }
 }
+
+// MARK: - APIErrorResponse
 
 /// API error response body structure.
 private struct APIErrorResponse: Decodable {

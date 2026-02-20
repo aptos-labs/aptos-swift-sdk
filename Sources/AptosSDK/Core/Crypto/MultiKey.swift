@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - MultiKey
+
 /// A multi-key public key supporting M-of-N signatures with mixed key types.
 public struct MultiKey: Sendable, Equatable {
     /// The public keys in this multi-key.
@@ -13,14 +15,17 @@ public struct MultiKey: Sendable, Equatable {
         guard !publicKeys.isEmpty else {
             throw AptosError.invalidArgument("MultiKey requires at least one public key")
         }
-        guard signaturesRequired > 0 && signaturesRequired <= publicKeys.count else {
+        guard signaturesRequired > 0, signaturesRequired <= publicKeys.count else {
             throw AptosError.invalidArgument(
-                "signaturesRequired (\(signaturesRequired)) must be between 1 and \(publicKeys.count)")
+                "signaturesRequired (\(signaturesRequired)) must be between 1 and \(publicKeys.count)"
+            )
         }
         self.publicKeys = publicKeys
         self.signaturesRequired = signaturesRequired
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension MultiKey: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -34,6 +39,8 @@ extension MultiKey: BCSSerializable, BCSDeserializable {
         return try MultiKey(publicKeys: keys, signaturesRequired: required)
     }
 }
+
+// MARK: - MultiKeySignature
 
 /// A multi-signature composed of indexed signatures from a MultiKey.
 public struct MultiKeySignature: Sendable, Equatable {
@@ -52,8 +59,8 @@ public struct MultiKeySignature: Sendable, Equatable {
     /// Creates a MultiKeySignature from signatures and their key indices.
     public static func fromSignaturesWithIndices(
         signatures: [(index: Int, signature: AnySignature)],
-        totalKeys: Int
-    ) -> MultiKeySignature {
+        totalKeys _: Int
+    ) -> Self {
         let sorted = signatures.sorted { $0.index < $1.index }
         var bitmapBytes = [UInt8](repeating: 0, count: 4)
         for entry in sorted {
@@ -63,12 +70,14 @@ public struct MultiKeySignature: Sendable, Equatable {
                 bitmapBytes[byteIndex] |= (1 << (7 - bitIndex))
             }
         }
-        return MultiKeySignature(
+        return Self(
             signatures: sorted.map(\.signature),
             bitmap: Data(bitmapBytes)
         )
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension MultiKeySignature: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -83,7 +92,7 @@ extension MultiKeySignature: BCSSerializable, BCSDeserializable {
     }
 }
 
-// MARK: - Legacy MultiEd25519
+// MARK: - MultiEd25519PublicKey
 
 /// Legacy M-of-N Ed25519 multi-signature public key.
 public struct MultiEd25519PublicKey: Sendable, Equatable {
@@ -94,14 +103,17 @@ public struct MultiEd25519PublicKey: Sendable, Equatable {
         guard !publicKeys.isEmpty else {
             throw AptosError.invalidArgument("MultiEd25519 requires at least one key")
         }
-        guard threshold > 0 && threshold <= publicKeys.count else {
+        guard threshold > 0, threshold <= publicKeys.count else {
             throw AptosError.invalidArgument(
-                "threshold (\(threshold)) must be between 1 and \(publicKeys.count)")
+                "threshold (\(threshold)) must be between 1 and \(publicKeys.count)"
+            )
         }
         self.publicKeys = publicKeys
         self.threshold = threshold
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension MultiEd25519PublicKey: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -122,15 +134,17 @@ extension MultiEd25519PublicKey: BCSSerializable, BCSDeserializable {
         }
         let count = allBytes.count / Ed25519PublicKey.length
         var keys = [Ed25519PublicKey]()
-        for i in 0..<count {
+        for i in 0 ..< count {
             let start = i * Ed25519PublicKey.length
             let end = start + Ed25519PublicKey.length
-            let keyData = allBytes[start..<end]
+            let keyData = allBytes[start ..< end]
             keys.append(try Ed25519PublicKey(data: Data(keyData)))
         }
         return try MultiEd25519PublicKey(publicKeys: keys, threshold: threshold)
     }
 }
+
+// MARK: - MultiEd25519Signature
 
 /// Legacy multi-Ed25519 signature.
 public struct MultiEd25519Signature: Sendable, Equatable {
@@ -142,6 +156,8 @@ public struct MultiEd25519Signature: Sendable, Equatable {
         self.bitmap = bitmap
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension MultiEd25519Signature: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -165,10 +181,10 @@ extension MultiEd25519Signature: BCSSerializable, BCSDeserializable {
         }
         let count = sigBytes.count / Ed25519Signature.length
         var sigs = [Ed25519Signature]()
-        for i in 0..<count {
+        for i in 0 ..< count {
             let start = i * Ed25519Signature.length
             let end = start + Ed25519Signature.length
-            sigs.append(try Ed25519Signature(data: Data(sigBytes[start..<end])))
+            sigs.append(try Ed25519Signature(data: Data(sigBytes[start ..< end])))
         }
         return MultiEd25519Signature(signatures: sigs, bitmap: Data(bitmap))
     }

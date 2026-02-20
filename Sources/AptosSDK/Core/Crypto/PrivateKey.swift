@@ -25,7 +25,8 @@ public enum PrivateKeyUtils {
             }
         }
         throw AptosError.crypto(.invalidPrivateKey(
-            "Invalid AIP-80 format. Expected prefix: ed25519-priv-, secp256k1-priv-, or secp256r1-priv-"))
+            "Invalid AIP-80 format. Expected prefix: ed25519-priv-, secp256k1-priv-, or secp256r1-priv-"
+        ))
     }
 
     /// Returns true if the string is a valid AIP-80 private key format.

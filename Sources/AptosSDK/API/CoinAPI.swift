@@ -10,8 +10,8 @@ public struct CoinAPI: Sendable {
     init(config: AptosConfig, client: AptosHTTPClient) {
         self.config = config
         self.client = client
-        self.transactionAPI = TransactionAPI(config: config, client: client)
-        self.viewAPI = ViewAPI(config: config, client: client)
+        transactionAPI = TransactionAPI(config: config, client: client)
+        viewAPI = ViewAPI(config: config, client: client)
     }
 
     /// Transfers APT from one account to another.
@@ -22,10 +22,11 @@ public struct CoinAPI: Sendable {
         options: TransactionOptions = TransactionOptions()
     ) async throws -> TransactionResponse {
         let payload = TransactionPayload.entryFunction(
-            EntryFunction.aptTransfer(to: recipient, amount: amount)
+            try EntryFunction.aptTransfer(to: recipient, amount: amount)
         )
         return try await transactionAPI.submitAndWait(
-            sender: sender, payload: payload, options: options)
+            sender: sender, payload: payload, options: options
+        )
     }
 
     /// Gets the APT balance for an account.

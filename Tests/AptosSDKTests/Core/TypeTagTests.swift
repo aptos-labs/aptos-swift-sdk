@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import AptosSDK
 
 @Suite("TypeTag Tests")
@@ -32,7 +32,7 @@ struct TypeTagTests {
     @Test("Parse struct tag")
     func parseStructTag() throws {
         let tag = try TypeTag.fromString("0x1::aptos_coin::AptosCoin")
-        if case .structTag(let st) = tag {
+        if case let .structTag(st) = tag {
             #expect(st.address == AccountAddress.one)
             #expect(st.module == "aptos_coin")
             #expect(st.name == "AptosCoin")
@@ -45,11 +45,11 @@ struct TypeTagTests {
     @Test("Parse struct tag with type args")
     func parseStructTagWithTypeArgs() throws {
         let tag = try TypeTag.fromString("0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>")
-        if case .structTag(let st) = tag {
+        if case let .structTag(st) = tag {
             #expect(st.module == "coin")
             #expect(st.name == "CoinStore")
             #expect(st.typeArgs.count == 1)
-            if case .structTag(let innerSt) = st.typeArgs[0] {
+            if case let .structTag(innerSt) = st.typeArgs[0] {
                 #expect(innerSt.module == "aptos_coin")
                 #expect(innerSt.name == "AptosCoin")
             } else {

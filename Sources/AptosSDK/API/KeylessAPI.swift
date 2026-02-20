@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - KeylessAPI
+
 /// Keyless authentication operations.
 public struct KeylessAPI: Sendable {
     private let config: AptosConfig
@@ -23,7 +25,8 @@ public struct KeylessAPI: Sendable {
             uidKey: uidKey
         )
         let response: PepperResponse = try await client.post(
-            url: url, path: "fetch", body: body, apiType: .pepper)
+            url: url, path: "fetch", body: body, apiType: .pepper
+        )
         return try Hex.decode(response.pepper)
     }
 
@@ -42,10 +45,13 @@ public struct KeylessAPI: Sendable {
             uidKey: uidKey
         )
         let response: ProverResponse = try await client.post(
-            url: url, path: "prove", body: body, apiType: .prover)
+            url: url, path: "prove", body: body, apiType: .prover
+        )
         return try Hex.decode(response.proof)
     }
 }
+
+// MARK: - PepperRequest
 
 private struct PepperRequest: Encodable {
     let jwt: String
@@ -59,9 +65,13 @@ private struct PepperRequest: Encodable {
     }
 }
 
+// MARK: - PepperResponse
+
 private struct PepperResponse: Decodable {
     let pepper: String
 }
+
+// MARK: - ProverRequest
 
 private struct ProverRequest: Encodable {
     let jwt: String
@@ -76,6 +86,8 @@ private struct ProverRequest: Encodable {
         case uidKey = "uid_key"
     }
 }
+
+// MARK: - ProverResponse
 
 private struct ProverResponse: Decodable {
     let proof: String

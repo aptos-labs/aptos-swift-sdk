@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import AptosSDK
 
 @Suite("Account Tests")
@@ -17,7 +17,7 @@ struct AccountTests {
         let message = Data("test".utf8)
         let sig = try account.sign(message: message)
 
-        if case .ed25519(let ed25519Sig) = sig {
+        if case let .ed25519(ed25519Sig) = sig {
             let valid = account.publicKey.verify(message: message, signature: ed25519Sig)
             #expect(valid)
         } else {
@@ -67,7 +67,7 @@ struct AccountTests {
         let message = Data("test".utf8)
         let auth = try account.signWithAuthenticator(message: message)
 
-        if case .ed25519(let pubKey, let sig) = auth {
+        if case let .ed25519(pubKey, sig) = auth {
             #expect(pubKey == account.publicKey)
             let valid = pubKey.verify(message: message, signature: sig)
             #expect(valid)

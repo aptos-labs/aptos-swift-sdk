@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - TransactionBuilder
+
 /// Fluent builder for constructing raw transactions.
 public struct TransactionBuilder: Sendable {
     private var sender: AccountAddress?
@@ -13,49 +15,49 @@ public struct TransactionBuilder: Sendable {
     public init() {}
 
     /// Sets the sender address.
-    public func sender(_ address: AccountAddress) -> TransactionBuilder {
+    public func sender(_ address: AccountAddress) -> Self {
         var copy = self
         copy.sender = address
         return copy
     }
 
     /// Sets the sequence number.
-    public func sequenceNumber(_ seq: UInt64) -> TransactionBuilder {
+    public func sequenceNumber(_ seq: UInt64) -> Self {
         var copy = self
         copy.sequenceNumber = seq
         return copy
     }
 
     /// Sets the transaction payload.
-    public func payload(_ payload: TransactionPayload) -> TransactionBuilder {
+    public func payload(_ payload: TransactionPayload) -> Self {
         var copy = self
         copy.payload = payload
         return copy
     }
 
     /// Sets the maximum gas amount.
-    public func maxGasAmount(_ amount: UInt64) -> TransactionBuilder {
+    public func maxGasAmount(_ amount: UInt64) -> Self {
         var copy = self
         copy.maxGasAmount = amount
         return copy
     }
 
     /// Sets the gas unit price.
-    public func gasUnitPrice(_ price: UInt64) -> TransactionBuilder {
+    public func gasUnitPrice(_ price: UInt64) -> Self {
         var copy = self
         copy.gasUnitPrice = price
         return copy
     }
 
     /// Sets the expiration timestamp.
-    public func expirationTimestampSecs(_ timestamp: UInt64) -> TransactionBuilder {
+    public func expirationTimestampSecs(_ timestamp: UInt64) -> Self {
         var copy = self
         copy.expirationTimestampSecs = timestamp
         return copy
     }
 
     /// Sets the chain ID.
-    public func chainId(_ id: ChainId) -> TransactionBuilder {
+    public func chainId(_ id: ChainId) -> Self {
         var copy = self
         copy.chainId = id
         return copy
@@ -76,7 +78,8 @@ public struct TransactionBuilder: Sendable {
             throw AptosError.transaction(.buildFailed("chainId is required"))
         }
 
-        let expiry = expirationTimestampSecs ?? UInt64(Date().timeIntervalSince1970) + AptosConstants.defaultTxnExpirySecs
+        let expiry = expirationTimestampSecs ?? UInt64(Date().timeIntervalSince1970) + AptosConstants
+            .defaultTxnExpirySecs
 
         return RawTransaction(
             sender: sender,
@@ -90,7 +93,7 @@ public struct TransactionBuilder: Sendable {
     }
 }
 
-// MARK: - Transaction Types
+// MARK: - SimpleTransaction
 
 /// A simple (single-signer) transaction wrapper.
 public struct SimpleTransaction: Sendable, Equatable {
@@ -115,6 +118,8 @@ public struct SimpleTransaction: Sendable, Equatable {
         return try rawTransaction.signingMessage()
     }
 }
+
+// MARK: - MultiAgentTransaction
 
 /// A multi-agent transaction wrapper.
 public struct MultiAgentTransaction: Sendable, Equatable {
@@ -150,6 +155,8 @@ public struct MultiAgentTransaction: Sendable, Equatable {
     }
 }
 
+// MARK: - AnyRawTransaction
+
 /// Type-erasing wrapper for any transaction type.
 public enum AnyRawTransaction: Sendable, Equatable {
     case simple(SimpleTransaction)
@@ -157,15 +164,15 @@ public enum AnyRawTransaction: Sendable, Equatable {
 
     public var rawTransaction: RawTransaction {
         switch self {
-        case .simple(let t): return t.rawTransaction
-        case .multiAgent(let t): return t.rawTransaction
+        case let .simple(t): t.rawTransaction
+        case let .multiAgent(t): t.rawTransaction
         }
     }
 
     public func signingMessage() throws -> Data {
         switch self {
-        case .simple(let t): return try t.signingMessage()
-        case .multiAgent(let t): return try t.signingMessage()
+        case let .simple(t): try t.signingMessage()
+        case let .multiAgent(t): try t.signingMessage()
         }
     }
 }

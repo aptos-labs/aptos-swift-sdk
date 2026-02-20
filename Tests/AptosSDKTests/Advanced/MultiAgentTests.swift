@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 @testable import AptosSDK
 
 @Suite("Multi-Agent Tests")
@@ -19,7 +19,7 @@ struct MultiAgentTests {
             )),
             maxGasAmount: 200_000,
             gasUnitPrice: 100,
-            expirationTimestampSecs: 1000000,
+            expirationTimestampSecs: 1_000_000,
             chainId: .testnet
         )
 
@@ -43,7 +43,7 @@ struct MultiAgentTests {
             )),
             maxGasAmount: 200_000,
             gasUnitPrice: 100,
-            expirationTimestampSecs: 1000000,
+            expirationTimestampSecs: 1_000_000,
             chainId: .testnet
         )
 
@@ -83,7 +83,7 @@ struct MultiAgentTests {
             )),
             maxGasAmount: 200_000,
             gasUnitPrice: 100,
-            expirationTimestampSecs: 1000000,
+            expirationTimestampSecs: 1_000_000,
             chainId: .testnet
         )
 
@@ -97,7 +97,7 @@ struct MultiAgentTests {
         )
 
         // Should produce multiAgent authenticator
-        if case .multiAgent(_, let addrs, let signers) = signed.authenticator {
+        if case let .multiAgent(_, addrs, signers) = signed.authenticator {
             #expect(addrs.count == 1)
             #expect(signers.count == 1)
         } else {
@@ -106,7 +106,7 @@ struct MultiAgentTests {
 
         // Should be serializable
         let bcs = try signed.toBytes()
-        #expect(bcs.count > 0)
+        #expect(!bcs.isEmpty)
     }
 
     @Test("Multi-agent with fee payer")
@@ -124,7 +124,7 @@ struct MultiAgentTests {
             )),
             maxGasAmount: 200_000,
             gasUnitPrice: 100,
-            expirationTimestampSecs: 1000000,
+            expirationTimestampSecs: 1_000_000,
             chainId: .testnet
         )
 
@@ -139,7 +139,7 @@ struct MultiAgentTests {
             feePayer: feePayer
         )
 
-        if case .feePayer(_, let addrs, let signers, let feeAddr, _) = signed.authenticator {
+        if case let .feePayer(_, addrs, signers, feeAddr, _) = signed.authenticator {
             #expect(addrs.count == 1)
             #expect(signers.count == 1)
             #expect(feeAddr == feePayer.accountAddress)
@@ -159,7 +159,7 @@ struct MultiAgentTests {
             )),
             maxGasAmount: 200_000,
             gasUnitPrice: 100,
-            expirationTimestampSecs: 1000000,
+            expirationTimestampSecs: 1_000_000,
             chainId: .testnet
         )
 
@@ -184,7 +184,7 @@ struct MultiAgentTests {
             )),
             maxGasAmount: 200_000,
             gasUnitPrice: 100,
-            expirationTimestampSecs: 1000000,
+            expirationTimestampSecs: 1_000_000,
             chainId: .testnet
         )
 

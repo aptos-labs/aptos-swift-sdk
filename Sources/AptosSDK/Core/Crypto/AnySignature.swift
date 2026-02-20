@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - AnySignatureVariant
+
 /// Variant identifiers for AnySignature.
 public enum AnySignatureVariant: UInt32, Sendable {
     case ed25519 = 0
@@ -7,6 +9,8 @@ public enum AnySignatureVariant: UInt32, Sendable {
     case webAuthn = 2
     case keyless = 3
 }
+
+// MARK: - AnySignature
 
 /// A signature that can be any of the supported signature types.
 public enum AnySignature: Sendable, Equatable {
@@ -18,25 +22,27 @@ public enum AnySignature: Sendable, Equatable {
     /// The variant identifier.
     public var variant: AnySignatureVariant {
         switch self {
-        case .ed25519: return .ed25519
-        case .secp256k1: return .secp256k1
-        case .webAuthn: return .webAuthn
-        case .keyless: return .keyless
+        case .ed25519: .ed25519
+        case .secp256k1: .secp256k1
+        case .webAuthn: .webAuthn
+        case .keyless: .keyless
         }
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension AnySignature: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
         try serializer.serializeU32AsUleb128(variant.rawValue)
         switch self {
-        case .ed25519(let sig):
+        case let .ed25519(sig):
             try sig.serialize(to: &serializer)
-        case .secp256k1(let sig):
+        case let .secp256k1(sig):
             try sig.serialize(to: &serializer)
-        case .webAuthn(let sig):
+        case let .webAuthn(sig):
             try sig.serialize(to: &serializer)
-        case .keyless(let sig):
+        case let .keyless(sig):
             try sig.serialize(to: &serializer)
         }
     }
@@ -54,6 +60,8 @@ extension AnySignature: BCSSerializable, BCSDeserializable {
     }
 }
 
+// MARK: - WebAuthnSignature
+
 /// WebAuthn (Secp256r1) signature with authenticator data.
 public struct WebAuthnSignature: Sendable, Equatable {
     public let signature: Secp256r1Signature
@@ -66,6 +74,8 @@ public struct WebAuthnSignature: Sendable, Equatable {
         self.clientDataJSON = clientDataJSON
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension WebAuthnSignature: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {
@@ -82,6 +92,8 @@ extension WebAuthnSignature: BCSSerializable, BCSDeserializable {
     }
 }
 
+// MARK: - KeylessSignature
+
 /// Keyless signature placeholder (for future keyless auth support).
 public struct KeylessSignature: Sendable, Equatable {
     public let data: Data
@@ -90,6 +102,8 @@ public struct KeylessSignature: Sendable, Equatable {
         self.data = data
     }
 }
+
+// MARK: BCSSerializable, BCSDeserializable
 
 extension KeylessSignature: BCSSerializable, BCSDeserializable {
     public func serialize(to serializer: inout Serializer) throws {

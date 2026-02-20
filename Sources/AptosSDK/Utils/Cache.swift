@@ -1,86 +1,59 @@
 import Foundation
 
-/// Thread-safe LRU cache with TTL, implemented as an actor.
+/// Actor-based LRU cache with time-to-live expiration.
 public actor LRUCache<Key: Hashable & Sendable, Value: Sendable> {
-    private struct Entry {
-        let value: Value
-        let expiresAt: Date
-    }
-
-    private var storage: [Key: Entry] = [:]
+    private var storage: [Key: CacheEntry] = [:]
     private var accessOrder: [Key] = []
     private let maxSize: Int
-    private let defaultTTL: TimeInterval
-    private var cleanupTask: Task<Void, Never>?
+    private let ttl: TimeInterval
 
-    public init(maxSize: Int = defaultCacheMaxSize, defaultTTL: TimeInterval = 300) {
+    private struct CacheEntry {
+        let value: Value
+        let expiry: Date
+    }
+
+    /// Creates a new LRU cache.
+    public init(maxSize: Int = 100, ttl: TimeInterval = 300) {
         self.maxSize = maxSize
-        self.defaultTTL = defaultTTL
+        self.ttl = ttl
     }
 
-    /// Start periodic cleanup of expired entries.
-    public func startPeriodicCleanup() {
-        cleanupTask?.cancel()
-        cleanupTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(cacheCleanupInterval))
-                guard !Task.isCancelled else { break }
-                await self?.removeExpired()
-            }
-        }
-    }
-
-    /// Get a cached value, returning nil if not found or expired.
+    /// Gets a value from the cache, returning nil if expired or not found.
     public func get(_ key: Key) -> Value? {
         guard let entry = storage[key] else { return nil }
-        if Date() > entry.expiresAt {
+        if Date() > entry.expiry {
             storage.removeValue(forKey: key)
             accessOrder.removeAll { $0 == key }
             return nil
         }
-        // Move to end of access order (most recently used)
+        // Move to end (most recently used)
         accessOrder.removeAll { $0 == key }
         accessOrder.append(key)
         return entry.value
     }
 
-    /// Set a cached value with optional custom TTL.
-    public func set(_ key: Key, value: Value, ttl: TimeInterval? = nil) {
-        let expiry = Date().addingTimeInterval(ttl ?? defaultTTL)
-        storage[key] = Entry(value: value, expiresAt: expiry)
+    /// Sets a value in the cache.
+    public func set(_ key: Key, value: Value) {
+        // Evict if at capacity
+        while storage.count >= maxSize, let oldest = accessOrder.first {
+            storage.removeValue(forKey: oldest)
+            accessOrder.removeFirst()
+        }
+
+        storage[key] = CacheEntry(value: value, expiry: Date().addingTimeInterval(ttl))
         accessOrder.removeAll { $0 == key }
         accessOrder.append(key)
-        evictIfNeeded()
     }
 
-    /// Remove all entries.
+    /// Removes a value from the cache.
+    public func remove(_ key: Key) {
+        storage.removeValue(forKey: key)
+        accessOrder.removeAll { $0 == key }
+    }
+
+    /// Clears all entries.
     public func clear() {
         storage.removeAll()
         accessOrder.removeAll()
-    }
-
-    // MARK: - Internal
-
-    private func evictIfNeeded() {
-        guard storage.count > maxSize else { return }
-        let evictCount = maxSize / 10
-        let keysToEvict = Array(accessOrder.prefix(evictCount))
-        for key in keysToEvict {
-            storage.removeValue(forKey: key)
-        }
-        accessOrder.removeFirst(min(evictCount, accessOrder.count))
-    }
-
-    private func removeExpired() {
-        let now = Date()
-        let expired = storage.filter { now > $0.value.expiresAt }.map(\.key)
-        for key in expired {
-            storage.removeValue(forKey: key)
-            accessOrder.removeAll { $0 == key }
-        }
-    }
-
-    deinit {
-        cleanupTask?.cancel()
     }
 }

@@ -1,57 +1,52 @@
-import BigInt
 import Foundation
 
-/// SDK version string.
-public let sdkVersion = "0.1.0"
+/// SDK-wide constants and defaults.
+public enum AptosConstants {
+    /// SDK version string.
+    public static let version = "0.1.0"
 
-// MARK: - Gas Defaults
+    /// Default maximum gas amount for transactions.
+    public static let defaultMaxGasAmount: UInt64 = 200_000
 
-public let defaultMaxGasAmount: UInt64 = 200_000
-public let defaultTxnExpSecFromNow: UInt64 = 20
-public let defaultTxnTimeoutSec: UInt64 = 20
+    /// Default gas unit price.
+    public static let defaultGasUnitPrice: UInt64 = 100
 
-// MARK: - Framework Addresses
+    /// Default transaction expiry in seconds from now.
+    public static let defaultTxnExpirySecs: UInt64 = 20
 
-public let aptosCoin = "0x1::aptos_coin::AptosCoin"
-public let aptosFAAddress =
-    "0x000000000000000000000000000000000000000000000000000000000000000a"
+    /// Default timeout for waiting for transaction confirmation (seconds).
+    public static let defaultTxnTimeoutSecs: UInt64 = 20
 
-// MARK: - Signing Salts
+    /// Polling interval for transaction wait (milliseconds).
+    public static let waitForTxnPollIntervalMs: UInt64 = 200
 
-public let rawTransactionSalt = "APTOS::RawTransaction"
-public let rawTransactionWithDataSalt = "APTOS::RawTransactionWithData"
-public let accountAbstractionSigningDataSalt = "APTOS::AASigningData"
+    /// User-agent header value.
+    public static let userAgent = "aptos-swift-sdk/\(version)"
 
-// MARK: - BCS Limits
+    /// The APT coin type.
+    public static let aptosCoin = "0x1::aptos_coin::AptosCoin"
 
-public let maxU8: UInt8 = .max
-public let maxU16: UInt16 = .max
-public let maxU32: UInt32 = .max
-public let maxU64: UInt64 = .max
-public let maxU128: BigUInt = (BigUInt(1) << 128) - 1
-public let maxU256: BigUInt = (BigUInt(1) << 256) - 1
+    /// The fungible asset metadata address for APT.
+    public static let aptosFAAddress = "0x000000000000000000000000000000000000000000000000000000000000000a"
 
-// MARK: - Cache
+    /// BCS MIME type for signed transaction submission.
+    public static let bcsSignedTransactionMIME = "application/x.aptos.signed_transaction+bcs"
 
-public let defaultCacheMaxSize = 1000
-public let ledgerInfoCacheTTL: TimeInterval = 10
-public let gasPriceCacheTTL: TimeInterval = 300
-public let abiCacheTTL: TimeInterval = 300
-public let cacheCleanupInterval: TimeInterval = 60
+    /// BCS MIME type for general BCS content.
+    public static let bcsMIME = "application/x-bcs"
 
-// MARK: - Transaction Worker
+    /// Default cache TTL for ABI lookups (seconds).
+    public static let abiCacheTTL: TimeInterval = 300
 
-public let maxTransactionHistory = 10_000
-public let transactionHistoryEvictionCount = 1_000
-public let defaultMaximumInFlight = 100
-public let defaultWorkerMaxWaitTime: TimeInterval = 30
-public let defaultWorkerSleepTime: TimeInterval = 10
+    /// Default cache TTL for gas price estimates (seconds).
+    public static let gasPriceCacheTTL: TimeInterval = 300
 
-// MARK: - Indexer Sync
+    /// Maximum entries in transaction worker history.
+    public static let maxTransactionWorkerHistory = 10_000
 
-public let indexerSyncTimeout: TimeInterval = 3
-public let indexerSyncPollingInterval: TimeInterval = 0.2
+    /// Eviction count when history limit is exceeded.
+    public static let transactionWorkerEvictionCount = 1_000
 
-// MARK: - Pagination
-
-public let defaultPageSize = 25
+    /// Maximum in-flight transactions for batch worker.
+    public static let maximumInFlight = 100
+}

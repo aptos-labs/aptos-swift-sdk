@@ -1,21 +1,20 @@
 import Foundation
 
-/// Supported Aptos networks.
-public enum Network: String, Sendable, Hashable, CaseIterable, Codable {
-    case mainnet = "mainnet"
-    case testnet = "testnet"
-    case devnet = "devnet"
-    case shelbynet = "shelbynet"
-    case netna = "netna"
-    case local = "local"
-    case custom = "custom"
-}
+/// Network presets for the Aptos blockchain.
+public enum Network: String, Sendable, CaseIterable {
+    case mainnet
+    case testnet
+    case devnet
+    case local
+    case custom
 
-/// API endpoint types.
-public enum AptosAPIType: String, Sendable {
-    case fullnode = "Fullnode"
-    case indexer = "Indexer"
-    case faucet = "Faucet"
-    case pepper = "Pepper"
-    case prover = "Prover"
+    /// Chain ID for predefined networks.
+    public var chainId: ChainId? {
+        switch self {
+        case .mainnet: return .mainnet
+        case .testnet: return .testnet
+        case .local: return .local
+        case .devnet, .custom: return nil
+        }
+    }
 }

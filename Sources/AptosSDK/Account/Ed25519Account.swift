@@ -1,38 +1,55 @@
 import Foundation
 
-/// A legacy Ed25519 single-key account.
-///
-/// Uses the `SigningScheme.ed25519` scheme where the authentication key is
-/// derived directly from the Ed25519 public key: `SHA3-256(pubkey || 0x00)`.
-public struct Ed25519Account: AptosAccount {
+/// An Ed25519 account using the legacy signing scheme.
+public struct Ed25519Account: AptosAccount, Sendable {
+    /// The Ed25519 private key.
     public let privateKey: Ed25519PrivateKey
+
+    /// The Ed25519 public key.
+    public let publicKey: Ed25519PublicKey
+
+    /// The account address derived from the authentication key.
     public let accountAddress: AccountAddress
-    public let signingScheme: SigningScheme = .ed25519
 
-    public var publicKey: any AccountPublicKey {
-        privateKey.publicKey()
-    }
+    public let signingScheme = SigningScheme.ed25519
 
-    /// Create from an existing private key.
-    public init(privateKey: Ed25519PrivateKey) {
+    /// Creates an account from an existing private key.
+    public init(privateKey: Ed25519PrivateKey, address: AccountAddress? = nil) throws {
         self.privateKey = privateKey
-        let pubKey = privateKey.publicKey()
-        let authKey = AuthenticationKey.fromPublicKeyBytes(pubKey.data, scheme: .ed25519)
-        self.accountAddress = authKey.derivedAddress()
+        self.publicKey = try privateKey.publicKey()
+        if let address {
+            self.accountAddress = address
+        } else {
+            let authKey = AuthenticationKey.fromEd25519(publicKey: self.publicKey)
+            self.accountAddress = authKey.accountAddress()
+        }
     }
 
-    /// Create from an existing private key with a specific address (e.g. after key rotation).
-    public init(privateKey: Ed25519PrivateKey, address: AccountAddress) {
-        self.privateKey = privateKey
-        self.accountAddress = address
+    /// Generates a new random Ed25519 account.
+    public static func generate() throws -> Ed25519Account {
+        let privateKey = Ed25519PrivateKey.generate()
+        return try Ed25519Account(privateKey: privateKey)
     }
 
-    public func sign(message: Data) throws -> any AccountSignature {
-        try privateKey.sign(message: message)
+    /// Creates from a hex private key string.
+    public static func fromPrivateKey(_ hex: String) throws -> Ed25519Account {
+        let key = try Ed25519PrivateKey.fromHex(hex)
+        return try Ed25519Account(privateKey: key)
+    }
+
+    // MARK: - AptosAccount
+
+    public func sign(message: Data) throws -> AnySignature {
+        let sig = try privateKey.sign(message)
+        return .ed25519(sig)
     }
 
     public func signWithAuthenticator(message: Data) throws -> AccountAuthenticator {
-        let signature = try privateKey.sign(message: message)
-        return .ed25519(publicKey: privateKey.publicKey(), signature: signature)
+        let sig = try privateKey.sign(message)
+        return .ed25519(publicKey: publicKey, signature: sig)
+    }
+
+    public func authenticationKey() throws -> AuthenticationKey {
+        AuthenticationKey.fromEd25519(publicKey: publicKey)
     }
 }

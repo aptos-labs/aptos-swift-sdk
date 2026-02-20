@@ -1,87 +1,96 @@
 import Foundation
 
-/// A single-key account using the `SigningScheme.singleKey` scheme.
+/// A single-key account using the unified SingleKey authentication scheme.
 ///
-/// Supports Ed25519, Secp256k1, and Secp256r1 private keys, all wrapped
-/// in the `AnyPublicKey` authentication scheme.
-public struct SingleKeyAccount: AptosAccount {
+/// Supports Ed25519, Secp256k1, and Secp256r1 key types.
+public struct SingleKeyAccount: AptosAccount, Sendable {
+    /// The public key wrapped as AnyPublicKey.
+    public let publicKey: AnyPublicKey
+
+    /// The account address.
     public let accountAddress: AccountAddress
-    public let signingScheme: SigningScheme = .singleKey
 
-    private let _publicKey: AnyPublicKey
-    private let _signer: @Sendable (Data) throws -> AnySignature
+    public let signingScheme = SigningScheme.singleKey
 
-    public var publicKey: any AccountPublicKey {
-        _publicKey
-    }
+    // Internal storage for the private key
+    private let signFunc: @Sendable (Data) throws -> AnySignature
 
-    /// The `AnyPublicKey` wrapper for this account.
-    public var anyPublicKey: AnyPublicKey { _publicKey }
-
-    // MARK: - Ed25519
-
-    /// Create from an Ed25519 private key (non-legacy SingleKey scheme).
-    public init(privateKey: Ed25519PrivateKey) {
-        let pubKey = privateKey.publicKey()
-        self._publicKey = .ed25519(pubKey)
-        // Auth key for SingleKey: SHA3-256(BCS(AnyPublicKey) || singleKey scheme)
-        let authKey = AuthenticationKey.fromPublicKeyBytes(_publicKey.bcsToBytes(), scheme: .singleKey)
-        self.accountAddress = authKey.derivedAddress()
-        self._signer = { message in
-            let sig = try privateKey.sign(message: message)
+    /// Creates an Ed25519 single-key account.
+    public init(privateKey: Ed25519PrivateKey, address: AccountAddress? = nil) throws {
+        let pubKey = try privateKey.publicKey()
+        self.publicKey = .ed25519(pubKey)
+        if let address {
+            self.accountAddress = address
+        } else {
+            self.accountAddress = try AuthenticationKey.fromSingleKey(publicKey: self.publicKey).accountAddress()
+        }
+        let pk = privateKey
+        self.signFunc = { message in
+            let sig = try pk.sign(message)
             return .ed25519(sig)
         }
     }
 
-    // MARK: - Secp256k1
-
-    /// Create from a Secp256k1 private key.
-    public init(privateKey: Secp256k1PrivateKey) {
-        let pubKey = privateKey.publicKey()
-        self._publicKey = .secp256k1(pubKey)
-        let authKey = AuthenticationKey.fromPublicKeyBytes(_publicKey.bcsToBytes(), scheme: .singleKey)
-        self.accountAddress = authKey.derivedAddress()
-        self._signer = { message in
-            let sig = try privateKey.sign(message: message)
+    /// Creates a Secp256k1 single-key account.
+    public init(privateKey: Secp256k1PrivateKey, address: AccountAddress? = nil) throws {
+        let pubKey = try privateKey.publicKey()
+        self.publicKey = .secp256k1(pubKey)
+        if let address {
+            self.accountAddress = address
+        } else {
+            self.accountAddress = try AuthenticationKey.fromSingleKey(publicKey: self.publicKey).accountAddress()
+        }
+        let pk = privateKey
+        self.signFunc = { message in
+            let sig = try pk.sign(message)
             return .secp256k1(sig)
         }
     }
 
-    // MARK: - With explicit address
+    /// Creates a Secp256r1 single-key account.
+    public init(privateKey: Secp256r1PrivateKey, address: AccountAddress? = nil) throws {
+        let pubKey = try privateKey.publicKey()
+        self.publicKey = .secp256r1(pubKey)
+        if let address {
+            self.accountAddress = address
+        } else {
+            self.accountAddress = try AuthenticationKey.fromSingleKey(publicKey: self.publicKey).accountAddress()
+        }
+        let pk = privateKey
+        self.signFunc = { message in
+            let sig = try pk.sign(message)
+            return .webAuthn(WebAuthnSignature(
+                signature: sig,
+                authenticatorData: Data(),
+                clientDataJSON: Data()
+            ))
+        }
+    }
 
-    /// Create with an explicit address (for rotated accounts).
-    public init(privateKey: Ed25519PrivateKey, address: AccountAddress) {
-        let pubKey = privateKey.publicKey()
-        self._publicKey = .ed25519(pubKey)
-        self.accountAddress = address
-        self._signer = { message in
-            let sig = try privateKey.sign(message: message)
-            return .ed25519(sig)
+    /// Generates a new single-key account with the specified scheme.
+    public static func generate(scheme: SigningSchemeInput = .ed25519) throws -> SingleKeyAccount {
+        switch scheme {
+        case .ed25519:
+            return try SingleKeyAccount(privateKey: Ed25519PrivateKey.generate())
+        case .secp256k1Ecdsa:
+            return try SingleKeyAccount(privateKey: Secp256k1PrivateKey.generate())
+        case .secp256r1Ecdsa:
+            return try SingleKeyAccount(privateKey: Secp256r1PrivateKey.generate())
         }
     }
 
     // MARK: - AptosAccount
 
-    public func sign(message: Data) throws -> any AccountSignature {
-        try _signer(message)
+    public func sign(message: Data) throws -> AnySignature {
+        try signFunc(message)
     }
 
     public func signWithAuthenticator(message: Data) throws -> AccountAuthenticator {
-        let signature = try _signer(message)
-        return .singleKey(publicKey: _publicKey, signature: signature)
+        let sig = try sign(message: message)
+        return .singleKey(publicKey: publicKey, signature: sig)
     }
-}
 
-// MARK: - AnyPublicKey AccountPublicKey conformance
-
-extension AnyPublicKey: AccountPublicKey {
-    public func verify(message: Data, signature: any AccountSignature) throws -> Bool {
-        switch self {
-        case .ed25519(let key): return try key.verify(message: message, signature: signature)
-        case .secp256k1(let key): return try key.verify(message: message, signature: signature)
-        case .secp256r1(let key): return try key.verify(message: message, signature: signature)
-        case .keyless, .federatedKeyless:
-            throw AptosError.cryptoError("Keyless verification is handled on-chain")
-        }
+    public func authenticationKey() throws -> AuthenticationKey {
+        try AuthenticationKey.fromSingleKey(publicKey: publicKey)
     }
 }

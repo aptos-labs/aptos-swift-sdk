@@ -2,84 +2,83 @@ import Foundation
 
 /// Transaction signing utilities.
 public enum TransactionSigner {
-    /// Sign a transaction with a single signer.
+    /// Signs a transaction with a single account.
     public static func sign(
-        signer: any AptosAccount,
-        transaction: AnyRawTransaction
+        transaction: AnyRawTransaction,
+        signer: any AptosAccount
     ) throws -> AccountAuthenticator {
-        try signer.signTransactionWithAuthenticator(transaction)
+        let message = try transaction.signingMessage()
+        return try signer.signWithAuthenticator(message: message)
     }
 
-    /// Build the signed transaction BCS bytes for submission.
-    public static func buildSignedTransaction(
+    /// Signs a transaction as a fee payer.
+    public static func signAsFeePayer(
         transaction: AnyRawTransaction,
+        feePayer: any AptosAccount
+    ) throws -> AccountAuthenticator {
+        let message = try transaction.signingMessage()
+        return try feePayer.signWithAuthenticator(message: message)
+    }
+
+    /// Creates a signed transaction from a simple transaction.
+    public static func createSignedTransaction(
+        transaction: SimpleTransaction,
         senderAuthenticator: AccountAuthenticator,
-        feePayerAuthenticator: AccountAuthenticator? = nil,
-        additionalSignersAuthenticators: [AccountAuthenticator]? = nil
+        feePayerAuthenticator: AccountAuthenticator? = nil
     ) throws -> SignedTransaction {
-        let rawTxn = transaction.rawTransaction
+        let txAuth: TransactionAuthenticator
 
-        let transactionAuthenticator: TransactionAuthenticator
-
-        switch transaction {
-        case .simple(let simple):
-            if let feePayerAddress = simple.feePayerAddress, let fpAuth = feePayerAuthenticator {
-                transactionAuthenticator = .feePayer(FeePayerAuthenticator(
-                    senderAuthenticator: senderAuthenticator,
-                    secondarySignerAddresses: [],
-                    secondaryAuthenticators: [],
-                    feePayerAddress: feePayerAddress,
-                    feePayerAuthenticator: fpAuth
-                ))
-            } else {
-                transactionAuthenticator = .singleSender(senderAuthenticator)
-            }
-
-        case .multiAgent(let multiAgent):
-            let secondaryAuths = additionalSignersAuthenticators ?? []
-
-            if let feePayerAddress = multiAgent.feePayerAddress, let fpAuth = feePayerAuthenticator {
-                transactionAuthenticator = .feePayer(FeePayerAuthenticator(
-                    senderAuthenticator: senderAuthenticator,
-                    secondarySignerAddresses: multiAgent.secondarySignerAddresses,
-                    secondaryAuthenticators: secondaryAuths,
-                    feePayerAddress: feePayerAddress,
-                    feePayerAuthenticator: fpAuth
-                ))
-            } else {
-                transactionAuthenticator = .multiAgent(MultiAgentAuthenticator(
-                    senderAuthenticator: senderAuthenticator,
-                    secondarySignerAddresses: multiAgent.secondarySignerAddresses,
-                    secondaryAuthenticators: secondaryAuths
-                ))
+        if let feePayer = transaction.feePayerAddress, let feePayerAuth = feePayerAuthenticator {
+            txAuth = .feePayer(
+                sender: senderAuthenticator,
+                secondarySignerAddresses: [],
+                secondarySigners: [],
+                feePayerAddress: feePayer,
+                feePayerAuthenticator: feePayerAuth
+            )
+        } else {
+            switch senderAuthenticator {
+            case .ed25519(let pubKey, let sig):
+                txAuth = .ed25519(publicKey: pubKey, signature: sig)
+            default:
+                txAuth = .singleSender(senderAuthenticator)
             }
         }
 
-        return SignedTransaction(rawTransaction: rawTxn, authenticator: transactionAuthenticator)
+        return SignedTransaction(
+            rawTransaction: transaction.rawTransaction,
+            authenticator: txAuth
+        )
     }
 
-    /// Build a simulated transaction with empty signatures.
-    public static func buildSimulationSignedTransaction(
-        transaction: AnyRawTransaction,
-        signerPublicKey: AnyPublicKey,
-        feePayerPublicKey: AnyPublicKey? = nil
+    /// Creates a signed transaction from a multi-agent transaction.
+    public static func createMultiAgentSignedTransaction(
+        transaction: MultiAgentTransaction,
+        senderAuthenticator: AccountAuthenticator,
+        secondaryAuthenticators: [AccountAuthenticator],
+        feePayerAuthenticator: AccountAuthenticator? = nil
     ) throws -> SignedTransaction {
-        let emptySignature = try AnySignature.ed25519(
-            Ed25519Signature(data: Data(repeating: 0, count: 64))
-        )
-        let senderAuth = AccountAuthenticator.singleKey(
-            publicKey: signerPublicKey,
-            signature: emptySignature
-        )
+        let txAuth: TransactionAuthenticator
 
-        let feePayerAuth: AccountAuthenticator? = feePayerPublicKey.map { pk in
-            .singleKey(publicKey: pk, signature: emptySignature)
+        if let feePayer = transaction.feePayerAddress, let feePayerAuth = feePayerAuthenticator {
+            txAuth = .feePayer(
+                sender: senderAuthenticator,
+                secondarySignerAddresses: transaction.secondarySignerAddresses,
+                secondarySigners: secondaryAuthenticators,
+                feePayerAddress: feePayer,
+                feePayerAuthenticator: feePayerAuth
+            )
+        } else {
+            txAuth = .multiAgent(
+                sender: senderAuthenticator,
+                secondarySignerAddresses: transaction.secondarySignerAddresses,
+                secondarySigners: secondaryAuthenticators
+            )
         }
 
-        return try buildSignedTransaction(
-            transaction: transaction,
-            senderAuthenticator: senderAuth,
-            feePayerAuthenticator: feePayerAuth
+        return SignedTransaction(
+            rawTransaction: transaction.rawTransaction,
+            authenticator: txAuth
         )
     }
 }

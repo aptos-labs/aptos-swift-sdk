@@ -1,87 +1,82 @@
 import Foundation
 
-/// Keyless authentication API operations.
+/// Keyless authentication operations.
 public struct KeylessAPI: Sendable {
     private let config: AptosConfig
     private let client: AptosHTTPClient
 
-    public init(config: AptosConfig, client: AptosHTTPClient) {
+    init(config: AptosConfig, client: AptosHTTPClient) {
         self.config = config
         self.client = client
     }
 
-    /// Fetch a pepper value from the pepper service.
+    /// Gets the pepper from the pepper service.
     public func getPepper(
         jwt: String,
-        ephemeralKeyPair: EphemeralKeyPairData,
-        uidKey: String = "sub",
-        derivationPath: String? = nil
+        ephemeralPublicKey: Data,
+        uidKey: String = "sub"
     ) async throws -> Data {
-        var body: [String: String] = [
-            "jwt_b64": jwt,
-            "epk": ephemeralKeyPair.publicKeyHex,
-            "exp_date_secs": String(ephemeralKeyPair.expiryDateSecs),
-            "epk_blinder": ephemeralKeyPair.blinderHex,
-            "uid_key": uidKey,
-        ]
-        if let path = derivationPath {
-            body["derivation_path"] = path
-        }
-
-        let response: AptosResponse<PepperResponse> = try await client.postPepper(
-            path: "/v0/signature",
-            body: body,
-            originMethod: "KeylessAPI.getPepper"
+        let url = try config.getPepperURL()
+        let body = PepperRequest(
+            jwt: jwt,
+            ephemeralPublicKey: Hex.encode(ephemeralPublicKey),
+            uidKey: uidKey
         )
-        let pepperData = try Hex.decode(response.data.pepper)
-        return pepperData
+        let response: PepperResponse = try await client.post(
+            url: url, path: "fetch", body: body, apiType: .pepper)
+        return try Hex.decode(response.pepper)
     }
 
-    /// Fetch a zero-knowledge proof from the prover service.
+    /// Gets a proof from the prover service.
     public func getProof(
         jwt: String,
-        ephemeralKeyPair: EphemeralKeyPairData,
+        ephemeralPublicKey: Data,
         pepper: Data,
         uidKey: String = "sub"
-    ) async throws -> ZeroKnowledgeProofResponse {
-        let body: [String: String] = [
-            "jwt_b64": jwt,
-            "epk": ephemeralKeyPair.publicKeyHex,
-            "exp_date_secs": String(ephemeralKeyPair.expiryDateSecs),
-            "epk_blinder": ephemeralKeyPair.blinderHex,
-            "pepper": Hex.encode(pepper),
-            "uid_key": uidKey,
-        ]
-
-        let response: AptosResponse<ZeroKnowledgeProofResponse> = try await client.postProver(
-            path: "/v0/prove",
-            body: body,
-            originMethod: "KeylessAPI.getProof"
+    ) async throws -> Data {
+        let url = try config.getProverURL()
+        let body = ProverRequest(
+            jwt: jwt,
+            ephemeralPublicKey: Hex.encode(ephemeralPublicKey),
+            pepper: Hex.encode(pepper),
+            uidKey: uidKey
         )
-        return response.data
+        let response: ProverResponse = try await client.post(
+            url: url, path: "prove", body: body, apiType: .prover)
+        return try Hex.decode(response.proof)
     }
 }
 
-/// Input data for ephemeral key pair operations.
-public struct EphemeralKeyPairData: Sendable {
-    public let publicKeyHex: String
-    public let expiryDateSecs: UInt64
-    public let blinderHex: String
+private struct PepperRequest: Encodable {
+    let jwt: String
+    let ephemeralPublicKey: String
+    let uidKey: String
 
-    public init(publicKeyHex: String, expiryDateSecs: UInt64, blinderHex: String) {
-        self.publicKeyHex = publicKeyHex
-        self.expiryDateSecs = expiryDateSecs
-        self.blinderHex = blinderHex
+    enum CodingKeys: String, CodingKey {
+        case jwt
+        case ephemeralPublicKey = "epk"
+        case uidKey = "uid_key"
     }
 }
 
-/// Response from the pepper service.
-public struct PepperResponse: Codable, Sendable {
-    public let pepper: String
+private struct PepperResponse: Decodable {
+    let pepper: String
 }
 
-/// Response from the prover service.
-public struct ZeroKnowledgeProofResponse: Codable, Sendable {
-    public let proof: String
+private struct ProverRequest: Encodable {
+    let jwt: String
+    let ephemeralPublicKey: String
+    let pepper: String
+    let uidKey: String
+
+    enum CodingKeys: String, CodingKey {
+        case jwt
+        case ephemeralPublicKey = "epk"
+        case pepper
+        case uidKey = "uid_key"
+    }
 }
 
+private struct ProverResponse: Decodable {
+    let proof: String
+}

@@ -1,65 +1,35 @@
 import Foundation
 
-/// Coin-related API operations.
+/// Coin (APT) transfer operations.
 public struct CoinAPI: Sendable {
     private let config: AptosConfig
     private let client: AptosHTTPClient
+    private let transactionAPI: TransactionAPI
+    private let viewAPI: ViewAPI
 
-    public init(config: AptosConfig, client: AptosHTTPClient) {
+    init(config: AptosConfig, client: AptosHTTPClient) {
         self.config = config
         self.client = client
+        self.transactionAPI = TransactionAPI(config: config, client: client)
+        self.viewAPI = ViewAPI(config: config, client: client)
     }
 
-    /// Build a transaction to transfer APT coins.
-    public func transferCoinTransaction(
-        sender: AccountAddress,
-        recipient: AccountAddress,
+    /// Transfers APT from one account to another.
+    public func transferAPT(
+        from sender: any AptosAccount,
+        to recipient: AccountAddress,
         amount: UInt64,
-        coinType: String = aptosCoin,
-        options: TransactionOptions? = nil
-    ) async throws -> SimpleTransaction {
-        var serializer = Serializer()
-        recipient.serialize(to: &serializer)
-        let recipientArg = serializer.output()
-
-        var serializer2 = Serializer()
-        serializer2.serializeU64(amount)
-        let amountArg = serializer2.output()
-
-        let data = InputEntryFunctionData(
-            function: "0x1::aptos_account::transfer_coins",
-            functionArguments: [AnyEncodable(recipient), AnyEncodable(amount)],
-            typeArguments: [coinType],
-            abi: EntryFunctionABI(parameters: [.address, .u64])
+        options: TransactionOptions = TransactionOptions()
+    ) async throws -> TransactionResponse {
+        let payload = TransactionPayload.entryFunction(
+            EntryFunction.aptTransfer(to: recipient, amount: amount)
         )
-
-        let builder = TransactionBuilder(config: config, client: client)
-        return try await builder.buildSimple(
-            sender: sender,
-            data: data,
-            options: options
-        )
+        return try await transactionAPI.submitAndWait(
+            sender: sender, payload: payload, options: options)
     }
 
-    /// Build a transaction to transfer APT (native transfer).
-    public func transferAPTTransaction(
-        sender: AccountAddress,
-        recipient: AccountAddress,
-        amount: UInt64,
-        options: TransactionOptions? = nil
-    ) async throws -> SimpleTransaction {
-        let data = InputEntryFunctionData(
-            function: "0x1::aptos_account::transfer",
-            functionArguments: [AnyEncodable(recipient), AnyEncodable(amount)],
-            typeArguments: [],
-            abi: EntryFunctionABI(parameters: [.address, .u64])
-        )
-
-        let builder = TransactionBuilder(config: config, client: client)
-        return try await builder.buildSimple(
-            sender: sender,
-            data: data,
-            options: options
-        )
+    /// Gets the APT balance for an account.
+    public func getBalance(_ address: AccountAddress) async throws -> UInt64 {
+        try await viewAPI.getBalance(address)
     }
 }

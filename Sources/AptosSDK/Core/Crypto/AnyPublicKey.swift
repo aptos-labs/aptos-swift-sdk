@@ -1,6 +1,6 @@
 import Foundation
 
-/// Variant index for `AnyPublicKey` BCS serialization.
+/// Variant identifiers for AnyPublicKey.
 public enum AnyPublicKeyVariant: UInt32, Sendable {
     case ed25519 = 0
     case secp256k1 = 1
@@ -9,72 +9,60 @@ public enum AnyPublicKeyVariant: UInt32, Sendable {
     case federatedKeyless = 4
 }
 
-/// Wraps any public key variant for the SingleKey/MultiKey authentication scheme.
+/// A public key that can be any of the supported key types.
 ///
-/// This enum corresponds to the on-chain `AnyPublicKey` type where each variant
-/// is identified by a ULEB128-encoded variant index.
-public enum AnyPublicKey: Sendable, Hashable {
+/// Used with the SingleKey authentication scheme.
+public enum AnyPublicKey: Sendable, Equatable {
     case ed25519(Ed25519PublicKey)
     case secp256k1(Secp256k1PublicKey)
     case secp256r1(Secp256r1PublicKey)
     case keyless(KeylessPublicKey)
-    case federatedKeyless(FederatedKeylessPublicKey)
 
-    /// The variant index used in BCS serialization.
-    public var variantIndex: UInt32 {
+    /// The variant identifier for this key type.
+    public var variant: AnyPublicKeyVariant {
         switch self {
-        case .ed25519: return AnyPublicKeyVariant.ed25519.rawValue
-        case .secp256k1: return AnyPublicKeyVariant.secp256k1.rawValue
-        case .secp256r1: return AnyPublicKeyVariant.secp256r1.rawValue
-        case .keyless: return AnyPublicKeyVariant.keyless.rawValue
-        case .federatedKeyless: return AnyPublicKeyVariant.federatedKeyless.rawValue
+        case .ed25519: return .ed25519
+        case .secp256k1: return .secp256k1
+        case .secp256r1: return .secp256r1
+        case .keyless: return .keyless
         }
     }
 
-    /// The raw key bytes (delegates to the underlying key).
-    public var data: Data {
+    /// The raw public key data.
+    public var publicKeyData: Data {
         switch self {
-        case .ed25519(let key): return key.data
-        case .secp256k1(let key): return key.data
-        case .secp256r1(let key): return key.data
-        case .keyless(let key): return key.data
-        case .federatedKeyless(let key): return key.data
-        }
-    }
-
-}
-
-// MARK: - Serializable / Deserializable
-
-extension AnyPublicKey: Serializable {
-    public func serialize(to serializer: inout Serializer) {
-        serializer.serializeU32AsUleb128(variantIndex)
-        switch self {
-        case .ed25519(let key): key.serialize(to: &serializer)
-        case .secp256k1(let key): key.serialize(to: &serializer)
-        case .secp256r1(let key): key.serialize(to: &serializer)
-        case .keyless(let key): key.serialize(to: &serializer)
-        case .federatedKeyless(let key): key.serialize(to: &serializer)
+        case .ed25519(let k): return k.data
+        case .secp256k1(let k): return k.data
+        case .secp256r1(let k): return k.data
+        case .keyless(let k): return k.data
         }
     }
 }
 
-extension AnyPublicKey: Deserializable {
+extension AnyPublicKey: BCSSerializable, BCSDeserializable {
+    public func serialize(to serializer: inout Serializer) throws {
+        try serializer.serializeU32AsUleb128(variant.rawValue)
+        switch self {
+        case .ed25519(let key):
+            try key.serialize(to: &serializer)
+        case .secp256k1(let key):
+            try key.serialize(to: &serializer)
+        case .secp256r1(let key):
+            try key.serialize(to: &serializer)
+        case .keyless(let key):
+            try key.serialize(to: &serializer)
+        }
+    }
+
     public static func deserialize(from deserializer: inout Deserializer) throws -> AnyPublicKey {
         let variant = try deserializer.deserializeUleb128()
         switch variant {
-        case AnyPublicKeyVariant.ed25519.rawValue:
-            return .ed25519(try Ed25519PublicKey.deserialize(from: &deserializer))
-        case AnyPublicKeyVariant.secp256k1.rawValue:
-            return .secp256k1(try Secp256k1PublicKey.deserialize(from: &deserializer))
-        case AnyPublicKeyVariant.secp256r1.rawValue:
-            return .secp256r1(try Secp256r1PublicKey.deserialize(from: &deserializer))
-        case AnyPublicKeyVariant.keyless.rawValue:
-            return .keyless(try KeylessPublicKey.deserialize(from: &deserializer))
-        case AnyPublicKeyVariant.federatedKeyless.rawValue:
-            return .federatedKeyless(try FederatedKeylessPublicKey.deserialize(from: &deserializer))
+        case 0: return .ed25519(try Ed25519PublicKey.deserialize(from: &deserializer))
+        case 1: return .secp256k1(try Secp256k1PublicKey.deserialize(from: &deserializer))
+        case 2: return .secp256r1(try Secp256r1PublicKey.deserialize(from: &deserializer))
+        case 3: return .keyless(try KeylessPublicKey.deserialize(from: &deserializer))
         default:
-            throw AptosError.deserializationError("Unknown AnyPublicKey variant: \(variant)")
+            throw AptosError.serialization(.invalidData("Unknown AnyPublicKey variant: \(variant)"))
         }
     }
 }

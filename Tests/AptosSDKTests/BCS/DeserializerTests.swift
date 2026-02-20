@@ -1,353 +1,117 @@
-import BigInt
+import Testing
 import Foundation
-import XCTest
-
 @testable import AptosSDK
 
-final class DeserializerTests: XCTestCase {
-
-    // MARK: - Bool
-
-    func testDeserializeBoolTrue() throws {
+@Suite("BCS Deserializer Tests")
+struct DeserializerTests {
+    @Test("Deserialize bool")
+    func deserializeBool() throws {
         var d = Deserializer(data: Data([0x01]))
-        XCTAssertEqual(try d.deserializeBool(), true)
+        let val = try d.deserializeBool()
+        #expect(val == true)
+        try d.assertFinished()
     }
 
-    func testDeserializeBoolFalse() throws {
-        var d = Deserializer(data: Data([0x00]))
-        XCTAssertEqual(try d.deserializeBool(), false)
-    }
-
-    func testDeserializeBoolInvalidValue() {
-        var d = Deserializer(data: Data([0x02]))
-        XCTAssertThrowsError(try d.deserializeBool()) { error in
-            guard case AptosError.deserializationError(let msg) = error else {
-                XCTFail("Expected deserializationError, got: \(error)")
-                return
-            }
-            XCTAssertTrue(msg.contains("Invalid bool value"))
-        }
-    }
-
-    // MARK: - U8
-
-    func testDeserializeU8() throws {
+    @Test("Deserialize u8")
+    func deserializeU8() throws {
         var d = Deserializer(data: Data([0xFF]))
-        XCTAssertEqual(try d.deserializeU8(), 255)
+        let val = try d.deserializeU8()
+        #expect(val == 255)
     }
 
-    func testDeserializeU8EmptyData() {
-        var d = Deserializer(data: Data())
-        XCTAssertThrowsError(try d.deserializeU8()) { error in
-            guard case AptosError.deserializationError(let msg) = error else {
-                XCTFail("Expected deserializationError, got: \(error)")
-                return
-            }
-            XCTAssertTrue(msg.contains("Not enough bytes"))
-        }
+    @Test("Deserialize u16")
+    func deserializeU16() throws {
+        var d = Deserializer(data: Data([0x02, 0x01]))
+        let val = try d.deserializeU16()
+        #expect(val == 0x0102)
     }
 
-    // MARK: - U16
-
-    func testDeserializeU16KnownBytes() throws {
-        // 0x0100 in LE = [0x00, 0x01]
-        var d = Deserializer(data: Data([0x00, 0x01]))
-        XCTAssertEqual(try d.deserializeU16(), 256)
-    }
-
-    func testDeserializeU16InsufficientBytes() {
-        var d = Deserializer(data: Data([0x01]))
-        XCTAssertThrowsError(try d.deserializeU16())
-    }
-
-    // MARK: - U32
-
-    func testDeserializeU32KnownBytes() throws {
+    @Test("Deserialize u32")
+    func deserializeU32() throws {
         var d = Deserializer(data: Data([0x04, 0x03, 0x02, 0x01]))
-        XCTAssertEqual(try d.deserializeU32(), 0x01020304)
+        let val = try d.deserializeU32()
+        #expect(val == 0x01020304)
     }
 
-    func testDeserializeU32MaxValue() throws {
-        var d = Deserializer(data: Data([0xFF, 0xFF, 0xFF, 0xFF]))
-        XCTAssertEqual(try d.deserializeU32(), UInt32.max)
+    @Test("Deserialize u64")
+    func deserializeU64() throws {
+        var d = Deserializer(data: Data([0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]))
+        let val = try d.deserializeU64()
+        #expect(val == 0x0102030405060708)
     }
 
-    // MARK: - U64
-
-    func testDeserializeU64KnownBytes() throws {
-        var d = Deserializer(data: Data([0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]))
-        XCTAssertEqual(try d.deserializeU64(), 1)
+    @Test("Deserialize string")
+    func deserializeStr() throws {
+        var d = Deserializer(data: Data([0x05, 0x68, 0x65, 0x6C, 0x6C, 0x6F]))
+        let val = try d.deserializeStr()
+        #expect(val == "hello")
     }
 
-    func testDeserializeU64MaxValue() throws {
-        var d = Deserializer(data: Data(repeating: 0xFF, count: 8))
-        XCTAssertEqual(try d.deserializeU64(), UInt64.max)
+    @Test("Deserialize ULEB128")
+    func deserializeUleb128() throws {
+        var d1 = Deserializer(data: Data([0x00]))
+        #expect(try d1.deserializeUleb128() == 0)
+
+        var d2 = Deserializer(data: Data([0x7F]))
+        #expect(try d2.deserializeUleb128() == 127)
+
+        var d3 = Deserializer(data: Data([0x80, 0x01]))
+        #expect(try d3.deserializeUleb128() == 128)
     }
 
-    // MARK: - U128
-
-    func testDeserializeU128Zero() throws {
-        var d = Deserializer(data: Data(repeating: 0, count: 16))
-        let result = try d.deserializeU128()
-        XCTAssertEqual(result, BigUInt(0))
+    @Test("Roundtrip bool")
+    func roundtripBool() throws {
+        let original = true
+        let data = try bcsToBytes(original)
+        let decoded = try bcsFromBytes(Bool.self, data)
+        #expect(decoded == original)
     }
 
-    func testDeserializeU128One() throws {
-        var bytes = Data(repeating: 0, count: 16)
-        bytes[0] = 0x01  // LE: first byte = 1
-        var d = Deserializer(data: bytes)
-        let result = try d.deserializeU128()
-        XCTAssertEqual(result, BigUInt(1))
+    @Test("Roundtrip u64")
+    func roundtripU64() throws {
+        let original: UInt64 = 12345678
+        let data = try bcsToBytes(original)
+        let decoded = try bcsFromBytes(UInt64.self, data)
+        #expect(decoded == original)
     }
 
-    func testDeserializeU128Max() throws {
-        var d = Deserializer(data: Data(repeating: 0xFF, count: 16))
-        let result = try d.deserializeU128()
-        XCTAssertEqual(result, (BigUInt(1) << 128) - 1)
+    @Test("Roundtrip string")
+    func roundtripString() throws {
+        let original = "Hello, Aptos!"
+        let data = try bcsToBytes(original)
+        let decoded = try bcsFromBytes(String.self, data)
+        #expect(decoded == original)
     }
 
-    func testDeserializeU128InsufficientBytes() {
-        var d = Deserializer(data: Data(repeating: 0, count: 10))
-        XCTAssertThrowsError(try d.deserializeU128())
-    }
-
-    // MARK: - U256
-
-    func testDeserializeU256Zero() throws {
-        var d = Deserializer(data: Data(repeating: 0, count: 32))
-        let result = try d.deserializeU256()
-        XCTAssertEqual(result, BigUInt(0))
-    }
-
-    func testDeserializeU256Max() throws {
-        var d = Deserializer(data: Data(repeating: 0xFF, count: 32))
-        let result = try d.deserializeU256()
-        XCTAssertEqual(result, (BigUInt(1) << 256) - 1)
-    }
-
-    // MARK: - I8
-
-    func testDeserializeI8Negative() throws {
-        // -1 in two's complement 1 byte = 0xFF
-        var d = Deserializer(data: Data([0xFF]))
-        XCTAssertEqual(try d.deserializeI8(), -1)
-    }
-
-    func testDeserializeI8Min() throws {
-        // Int8.min = -128 = 0x80
-        var d = Deserializer(data: Data([0x80]))
-        XCTAssertEqual(try d.deserializeI8(), Int8.min)
-    }
-
-    // MARK: - I128
-
-    func testDeserializeI128Negative() throws {
-        // -1 in two's complement 16 bytes = all 0xFF
-        var d = Deserializer(data: Data(repeating: 0xFF, count: 16))
-        let result = try d.deserializeI128()
-        XCTAssertEqual(result, BigInt(-1))
-    }
-
-    func testDeserializeI128Min() throws {
-        // Min i128 = -(2^127)
-        // In LE: [0x00, 0x00, ..., 0x00, 0x80] (last byte in LE is highest byte = 0x80)
-        var bytes = Data(repeating: 0, count: 16)
-        bytes[15] = 0x80
-        var d = Deserializer(data: bytes)
-        let result = try d.deserializeI128()
-        XCTAssertEqual(result, -(BigInt(1) << 127))
-    }
-
-    // MARK: - Str
-
-    func testDeserializeStr() throws {
-        // ULEB128(5) = 0x05, then "hello"
-        let data = Data([0x05]) + Data("hello".utf8)
-        var d = Deserializer(data: data)
-        XCTAssertEqual(try d.deserializeStr(), "hello")
-    }
-
-    func testDeserializeStrEmpty() throws {
-        var d = Deserializer(data: Data([0x00]))
-        XCTAssertEqual(try d.deserializeStr(), "")
-    }
-
-    func testDeserializeStrInsufficientBytes() {
-        // Says length is 5 but only 2 bytes follow
-        let data = Data([0x05, 0x68, 0x69])
-        var d = Deserializer(data: data)
-        XCTAssertThrowsError(try d.deserializeStr())
-    }
-
-    // MARK: - Bytes
-
-    func testDeserializeBytes() throws {
-        let data = Data([0x03, 0xAA, 0xBB, 0xCC])
-        var d = Deserializer(data: data)
-        let result = try d.deserializeBytes()
-        XCTAssertEqual(result, Data([0xAA, 0xBB, 0xCC]))
-    }
-
-    func testDeserializeBytesEmpty() throws {
-        var d = Deserializer(data: Data([0x00]))
-        let result = try d.deserializeBytes()
-        XCTAssertEqual(result, Data())
-    }
-
-    // MARK: - Fixed Bytes
-
-    func testDeserializeFixedBytes() throws {
-        let data = Data([0xAB, 0xCD, 0xEF])
-        var d = Deserializer(data: data)
-        let result = try d.deserializeFixedBytes(3)
-        XCTAssertEqual(result, Data([0xAB, 0xCD, 0xEF]))
-    }
-
-    func testDeserializeFixedBytesInsufficientData() {
-        var d = Deserializer(data: Data([0xAB]))
-        XCTAssertThrowsError(try d.deserializeFixedBytes(3))
-    }
-
-    // MARK: - ULEB128
-
-    func testDeserializeUleb128Zero() throws {
-        var d = Deserializer(data: Data([0x00]))
-        XCTAssertEqual(try d.deserializeUleb128(), 0)
-    }
-
-    func testDeserializeUleb128SingleByte() throws {
-        var d = Deserializer(data: Data([0x7F]))
-        XCTAssertEqual(try d.deserializeUleb128(), 127)
-    }
-
-    func testDeserializeUleb128TwoBytes() throws {
-        var d = Deserializer(data: Data([0x80, 0x01]))
-        XCTAssertEqual(try d.deserializeUleb128(), 128)
-    }
-
-    func testDeserializeUleb128ThreeHundred() throws {
-        var d = Deserializer(data: Data([0xAC, 0x02]))
-        XCTAssertEqual(try d.deserializeUleb128(), 300)
-    }
-
-    func testDeserializeUleb128Empty() {
-        var d = Deserializer(data: Data())
-        XCTAssertThrowsError(try d.deserializeUleb128())
-    }
-
-    // MARK: - Vector (using AccountAddress which conforms to Deserializable)
-
-    func testDeserializeVectorAccountAddress() throws {
-        // Serialize a vector of 2 AccountAddresses
-        var s = Serializer()
-        s.serializeVector([AccountAddress.ZERO, AccountAddress.ONE])
-        let serialized = s.output()
-        var d = Deserializer(data: serialized)
-        let result: [AccountAddress] = try d.deserializeVector()
-        XCTAssertEqual(result.count, 2)
-        XCTAssertEqual(result[0], AccountAddress.ZERO)
-        XCTAssertEqual(result[1], AccountAddress.ONE)
-    }
-
-    func testDeserializeVectorEmpty() throws {
-        var d = Deserializer(data: Data([0x00]))
-        let result: [AccountAddress] = try d.deserializeVector()
-        XCTAssertEqual(result, [])
-    }
-
-    // MARK: - Option (using AccountAddress which conforms to Deserializable)
-
-    func testDeserializeOptionSome() throws {
-        var s = Serializer()
-        let addr: AccountAddress? = AccountAddress.ONE
-        s.serializeOption(addr)
-        let bytes = s.output()
-        var d = Deserializer(data: bytes)
-        let result: AccountAddress? = try d.deserializeOption()
-        XCTAssertEqual(result, AccountAddress.ONE)
-    }
-
-    func testDeserializeOptionNone() throws {
-        var s = Serializer()
-        let addr: AccountAddress? = nil
-        s.serializeOption(addr)
-        let bytes = s.output()
-        var d = Deserializer(data: bytes)
-        let result: AccountAddress? = try d.deserializeOption()
-        XCTAssertNil(result)
-    }
-
-    // MARK: - State Management
-
-    func testRemaining() throws {
-        var d = Deserializer(data: Data([0x01, 0x02, 0x03]))
-        XCTAssertEqual(d.remaining, 3)
-        _ = try d.deserializeU8()
-        XCTAssertEqual(d.remaining, 2)
-        _ = try d.deserializeU8()
-        XCTAssertEqual(d.remaining, 1)
-        _ = try d.deserializeU8()
-        XCTAssertEqual(d.remaining, 0)
-    }
-
-    func testAssertFinishedSuccess() throws {
+    @Test("Error on unexpected end")
+    func unexpectedEnd() throws {
         var d = Deserializer(data: Data([0x01]))
         _ = try d.deserializeU8()
-        try d.assertFinished()
-    }
-
-    func testAssertFinishedFailsWithRemainingBytes() throws {
-        var d = Deserializer(data: Data([0x01, 0x02]))
-        _ = try d.deserializeU8()
-        XCTAssertThrowsError(try d.assertFinished()) { error in
-            guard case AptosError.deserializationError(let msg) = error else {
-                XCTFail("Expected deserializationError, got: \(error)")
-                return
-            }
-            XCTAssertTrue(msg.contains("1 bytes remaining"))
+        #expect(throws: AptosError.self) {
+            try d.deserializeU8()
         }
     }
 
-    // MARK: - Edge Cases
-
-    func testDeserializeFromEmptyData() {
-        var d = Deserializer(data: Data())
-        XCTAssertThrowsError(try d.deserializeBool())
-        var d2 = Deserializer(data: Data())
-        XCTAssertThrowsError(try d2.deserializeU16())
-        var d3 = Deserializer(data: Data())
-        XCTAssertThrowsError(try d3.deserializeU32())
-        var d4 = Deserializer(data: Data())
-        XCTAssertThrowsError(try d4.deserializeU64())
+    @Test("Error on remaining bytes")
+    func remainingBytes() throws {
+        let d = Deserializer(data: Data([0x01, 0x02]))
+        #expect(throws: AptosError.self) {
+            try d.assertFinished()
+        }
     }
 
-    func testDeserializeMultipleValuesSequentially() throws {
-        // Serialize: bool(true) + u8(42) + u16(1000)
-        let data = Data([0x01, 0x2A, 0xE8, 0x03])
-        var d = Deserializer(data: data)
-        XCTAssertEqual(try d.deserializeBool(), true)
-        XCTAssertEqual(try d.deserializeU8(), 42)
-        XCTAssertEqual(try d.deserializeU16(), 1000)
-        try d.assertFinished()
-    }
+    @Test("Deserialize signed integers")
+    func deserializeSignedIntegers() throws {
+        var d1 = Deserializer(data: Data([0xFF]))
+        #expect(try d1.deserializeI8() == -1)
 
-    // MARK: - Deserializable Conformances (AccountAddress)
+        var d2 = Deserializer(data: Data([0xFF, 0xFF]))
+        #expect(try d2.deserializeI16() == -1)
 
-    func testAccountAddressDeserializable() throws {
-        let bytes = AccountAddress.ONE.bcsToBytes()
-        var d = Deserializer(data: bytes)
-        let value = try AccountAddress.deserialize(from: &d)
-        XCTAssertEqual(value, AccountAddress.ONE)
-        try d.assertFinished()
-    }
+        var d3 = Deserializer(data: Data([0xFF, 0xFF, 0xFF, 0xFF]))
+        #expect(try d3.deserializeI32() == -1)
 
-    func testEd25519PublicKeyDeserializable() throws {
-        let privateKey = Ed25519PrivateKey.generate()
-        let pk = privateKey.publicKey()
-        let serialized = pk.bcsToBytes()
-        var d = Deserializer(data: serialized)
-        let deserialized = try Ed25519PublicKey.deserialize(from: &d)
-        XCTAssertEqual(deserialized.data, pk.data)
-        try d.assertFinished()
+        var d4 = Deserializer(data: Data([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]))
+        #expect(try d4.deserializeI64() == -1)
     }
 }

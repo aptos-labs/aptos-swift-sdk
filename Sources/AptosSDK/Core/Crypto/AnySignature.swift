@@ -1,6 +1,6 @@
 import Foundation
 
-/// Variant index for `AnySignature` BCS serialization.
+/// Variant identifiers for AnySignature.
 public enum AnySignatureVariant: UInt32, Sendable {
     case ed25519 = 0
     case secp256k1 = 1
@@ -8,60 +8,96 @@ public enum AnySignatureVariant: UInt32, Sendable {
     case keyless = 3
 }
 
-/// Wraps any signature variant for the SingleKey authentication scheme.
-public enum AnySignature: AccountSignature {
+/// A signature that can be any of the supported signature types.
+public enum AnySignature: Sendable, Equatable {
     case ed25519(Ed25519Signature)
     case secp256k1(Secp256k1Signature)
-    case webAuthn(Data)
+    case webAuthn(WebAuthnSignature)
     case keyless(KeylessSignature)
 
-    public var variantIndex: UInt32 {
+    /// The variant identifier.
+    public var variant: AnySignatureVariant {
         switch self {
-        case .ed25519: return AnySignatureVariant.ed25519.rawValue
-        case .secp256k1: return AnySignatureVariant.secp256k1.rawValue
-        case .webAuthn: return AnySignatureVariant.webAuthn.rawValue
-        case .keyless: return AnySignatureVariant.keyless.rawValue
-        }
-    }
-
-    public var data: Data {
-        switch self {
-        case .ed25519(let sig): return sig.data
-        case .secp256k1(let sig): return sig.data
-        case .webAuthn(let bytes): return bytes
-        case .keyless(let sig): return sig.data
+        case .ed25519: return .ed25519
+        case .secp256k1: return .secp256k1
+        case .webAuthn: return .webAuthn
+        case .keyless: return .keyless
         }
     }
 }
 
-// MARK: - Serializable / Deserializable
-
-extension AnySignature: Serializable {
-    public func serialize(to serializer: inout Serializer) {
-        serializer.serializeU32AsUleb128(variantIndex)
+extension AnySignature: BCSSerializable, BCSDeserializable {
+    public func serialize(to serializer: inout Serializer) throws {
+        try serializer.serializeU32AsUleb128(variant.rawValue)
         switch self {
-        case .ed25519(let sig): sig.serialize(to: &serializer)
-        case .secp256k1(let sig): sig.serialize(to: &serializer)
-        case .webAuthn(let bytes): serializer.serializeBytes(bytes)
-        case .keyless(let sig): sig.serialize(to: &serializer)
+        case .ed25519(let sig):
+            try sig.serialize(to: &serializer)
+        case .secp256k1(let sig):
+            try sig.serialize(to: &serializer)
+        case .webAuthn(let sig):
+            try sig.serialize(to: &serializer)
+        case .keyless(let sig):
+            try sig.serialize(to: &serializer)
         }
     }
-}
 
-extension AnySignature: Deserializable {
     public static func deserialize(from deserializer: inout Deserializer) throws -> AnySignature {
         let variant = try deserializer.deserializeUleb128()
         switch variant {
-        case AnySignatureVariant.ed25519.rawValue:
-            return .ed25519(try Ed25519Signature.deserialize(from: &deserializer))
-        case AnySignatureVariant.secp256k1.rawValue:
-            return .secp256k1(try Secp256k1Signature.deserialize(from: &deserializer))
-        case AnySignatureVariant.webAuthn.rawValue:
-            return .webAuthn(try deserializer.deserializeBytes())
-        case AnySignatureVariant.keyless.rawValue:
-            return .keyless(try KeylessSignature.deserialize(from: &deserializer))
+        case 0: return .ed25519(try Ed25519Signature.deserialize(from: &deserializer))
+        case 1: return .secp256k1(try Secp256k1Signature.deserialize(from: &deserializer))
+        case 2: return .webAuthn(try WebAuthnSignature.deserialize(from: &deserializer))
+        case 3: return .keyless(try KeylessSignature.deserialize(from: &deserializer))
         default:
-            throw AptosError.deserializationError("Unknown AnySignature variant: \(variant)")
+            throw AptosError.serialization(.invalidData("Unknown AnySignature variant: \(variant)"))
         }
+    }
+}
+
+/// WebAuthn (Secp256r1) signature with authenticator data.
+public struct WebAuthnSignature: Sendable, Equatable {
+    public let signature: Secp256r1Signature
+    public let authenticatorData: Data
+    public let clientDataJSON: Data
+
+    public init(signature: Secp256r1Signature, authenticatorData: Data, clientDataJSON: Data) {
+        self.signature = signature
+        self.authenticatorData = authenticatorData
+        self.clientDataJSON = clientDataJSON
+    }
+}
+
+extension WebAuthnSignature: BCSSerializable, BCSDeserializable {
+    public func serialize(to serializer: inout Serializer) throws {
+        try signature.serialize(to: &serializer)
+        try serializer.serializeBytes(authenticatorData)
+        try serializer.serializeBytes(clientDataJSON)
+    }
+
+    public static func deserialize(from deserializer: inout Deserializer) throws -> WebAuthnSignature {
+        let sig = try Secp256r1Signature.deserialize(from: &deserializer)
+        let authData = try deserializer.deserializeBytes()
+        let clientData = try deserializer.deserializeBytes()
+        return WebAuthnSignature(signature: sig, authenticatorData: authData, clientDataJSON: clientData)
+    }
+}
+
+/// Keyless signature placeholder (for future keyless auth support).
+public struct KeylessSignature: Sendable, Equatable {
+    public let data: Data
+
+    public init(data: Data) {
+        self.data = data
+    }
+}
+
+extension KeylessSignature: BCSSerializable, BCSDeserializable {
+    public func serialize(to serializer: inout Serializer) throws {
+        try serializer.serializeBytes(data)
+    }
+
+    public static func deserialize(from deserializer: inout Deserializer) throws -> KeylessSignature {
+        let bytes = try deserializer.deserializeBytes()
+        return KeylessSignature(data: bytes)
     }
 }

@@ -1,71 +1,65 @@
 import Foundation
 
-/// An M-of-N multi-key account.
-///
-/// Contains a `MultiKey` (the N public keys and threshold) and
-/// the subset of signers that will actually sign transactions.
-public struct MultiKeyAccount: AptosAccount {
+/// A multi-key account supporting M-of-N signatures with mixed key types.
+public struct MultiKeyAccount: Sendable {
+    /// The multi-key public key.
     public let multiKey: MultiKey
+
+    /// The individual signer accounts.
     public let signers: [any AptosAccount]
+
+    /// The indices in the MultiKey.publicKeys that correspond to the signers.
     public let signerIndices: [Int]
+
+    /// The account address.
     public let accountAddress: AccountAddress
-    public let signingScheme: SigningScheme = .multiKey
 
-    public var publicKey: any AccountPublicKey {
-        multiKey.publicKeys.first!
-    }
-
-    /// Create a multi-key account.
-    ///
-    /// - Parameters:
-    ///   - multiKey: The M-of-N multi-key containing all public keys and the threshold.
-    ///   - signers: The accounts that will sign (must be at least `signaturesRequired`).
-    ///   - signerIndices: The indices of each signer within `multiKey.publicKeys`.
-    public init(
-        multiKey: MultiKey,
-        signers: [any AptosAccount],
-        signerIndices: [Int]
-    ) throws {
+    /// Creates a multi-key account.
+    public init(multiKey: MultiKey, signers: [any AptosAccount], signerIndices: [Int]) throws {
         guard signers.count == signerIndices.count else {
-            throw AptosError.invalidArgument(
-                "signers and signerIndices must have the same length"
-            )
+            throw AptosError.invalidArgument("signers and signerIndices must have the same count")
         }
         guard signers.count >= Int(multiKey.signaturesRequired) else {
             throw AptosError.invalidArgument(
-                "Need at least \(multiKey.signaturesRequired) signers, got \(signers.count)"
-            )
+                "Need at least \(multiKey.signaturesRequired) signers, got \(signers.count)")
         }
         self.multiKey = multiKey
         self.signers = signers
         self.signerIndices = signerIndices
-        self.accountAddress = multiKey.authKey().derivedAddress()
+        let authKey = try AuthenticationKey.fromMultiKey(multiKey: multiKey)
+        self.accountAddress = authKey.accountAddress()
     }
 
-    public func sign(message: Data) throws -> any AccountSignature {
-        // Sign with each signer and construct a multi-key signature
+    /// Signs a message with all signers and produces a MultiKeySignature.
+    public func sign(message: Data) throws -> MultiKeySignature {
         var indexedSigs: [(index: Int, signature: AnySignature)] = []
-        for (signer, index) in zip(signers, signerIndices) {
+        for (i, signer) in signers.enumerated() {
             let sig = try signer.sign(message: message)
-            // Wrap the signature in AnySignature based on the signer type
-            let anySig: AnySignature
-            if let edSig = sig as? Ed25519Signature {
-                anySig = .ed25519(edSig)
-            } else if let secpSig = sig as? Secp256k1Signature {
-                anySig = .secp256k1(secpSig)
-            } else {
-                throw AptosError.cryptoError("Unsupported signature type in MultiKeyAccount")
-            }
-            indexedSigs.append((index: index, signature: anySig))
+            indexedSigs.append((index: signerIndices[i], signature: sig))
         }
-        return MultiKeySignature.create(
+        return MultiKeySignature.fromSignaturesWithIndices(
             signatures: indexedSigs,
             totalKeys: multiKey.publicKeys.count
         )
     }
+}
+
+extension MultiKeyAccount: AptosAccount {
+    public var signingScheme: SigningScheme { .multiKey }
+
+    public func sign(message: Data) throws -> AnySignature {
+        // MultiKey returns multiple signatures, so we wrap in the first one
+        // This shouldn't normally be called directly
+        let multiSig: MultiKeySignature = try sign(message: message)
+        return multiSig.signatures.first!
+    }
 
     public func signWithAuthenticator(message: Data) throws -> AccountAuthenticator {
-        let sig = try sign(message: message) as! MultiKeySignature
-        return .multiKey(publicKey: multiKey, signatures: sig)
+        let multiSig: MultiKeySignature = try sign(message: message)
+        return .multiKey(publicKey: multiKey, signature: multiSig)
+    }
+
+    public func authenticationKey() throws -> AuthenticationKey {
+        try AuthenticationKey.fromMultiKey(multiKey: multiKey)
     }
 }

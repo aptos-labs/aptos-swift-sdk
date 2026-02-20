@@ -1,16 +1,15 @@
 import Foundation
 
-/// Network endpoint URLs.
-public enum NetworkEndpoints {
+/// Network endpoint URL configuration.
+public enum Endpoints {
     // MARK: - Full Node REST API
 
+    /// Returns the full node API URL for the given network.
     public static func fullnodeURL(for network: Network) -> String? {
         switch network {
         case .mainnet: return "https://api.mainnet.aptoslabs.com/v1"
         case .testnet: return "https://api.testnet.aptoslabs.com/v1"
         case .devnet: return "https://api.devnet.aptoslabs.com/v1"
-        case .shelbynet: return "https://api.shelbynet.shelby.xyz/v1"
-        case .netna: return "https://api.netna.staging.aptoslabs.com/v1"
         case .local: return "http://127.0.0.1:8080/v1"
         case .custom: return nil
         }
@@ -18,57 +17,41 @@ public enum NetworkEndpoints {
 
     // MARK: - Indexer GraphQL API
 
+    /// Returns the indexer GraphQL URL for the given network.
     public static func indexerURL(for network: Network) -> String? {
         switch network {
         case .mainnet: return "https://api.mainnet.aptoslabs.com/v1/graphql"
         case .testnet: return "https://api.testnet.aptoslabs.com/v1/graphql"
         case .devnet: return "https://api.devnet.aptoslabs.com/v1/graphql"
         case .local: return "http://127.0.0.1:8090/v1/graphql"
-        case .shelbynet, .netna, .custom: return nil
+        case .custom: return nil
         }
     }
 
     // MARK: - Faucet API
 
+    /// Returns the faucet URL for the given network.
     public static func faucetURL(for network: Network) -> String? {
         switch network {
         case .devnet: return "https://faucet.devnet.aptoslabs.com"
-        case .shelbynet: return "https://faucet.shelbynet.shelby.xyz"
         case .local: return "http://127.0.0.1:8081"
-        case .mainnet, .testnet, .netna, .custom: return nil
+        case .mainnet, .testnet, .custom: return nil
         }
     }
 
-    // MARK: - Pepper Service API
+    // MARK: - Keyless Services
 
-    public static func pepperURL(for network: Network) -> String? {
-        switch network {
-        case .mainnet: return "https://api.mainnet.aptoslabs.com/keyless/pepper/v0"
-        case .testnet: return "https://api.testnet.aptoslabs.com/keyless/pepper/v0"
-        case .devnet, .local: return "https://api.devnet.aptoslabs.com/keyless/pepper/v0"
-        case .shelbynet, .netna, .custom: return nil
-        }
+    /// Returns the pepper service URL for the given network.
+    public static func pepperServiceURL(for network: Network) -> String? {
+        guard let base = fullnodeURL(for: network) else { return nil }
+        let apiBase = base.replacingOccurrences(of: "/v1", with: "")
+        return "\(apiBase)/keyless/pepper/v0"
     }
 
-    // MARK: - Prover Service API
-
-    public static func proverURL(for network: Network) -> String? {
-        switch network {
-        case .mainnet: return "https://api.mainnet.aptoslabs.com/keyless/prover/v0"
-        case .testnet: return "https://api.testnet.aptoslabs.com/keyless/prover/v0"
-        case .devnet, .local: return "https://api.devnet.aptoslabs.com/keyless/prover/v0"
-        case .shelbynet, .netna, .custom: return nil
-        }
-    }
-
-    // MARK: - Chain IDs
-
-    public static func chainId(for network: Network) -> UInt8? {
-        switch network {
-        case .mainnet: return 1
-        case .testnet: return 2
-        case .local: return 4
-        default: return nil
-        }
+    /// Returns the prover service URL for the given network.
+    public static func proverServiceURL(for network: Network) -> String? {
+        guard let base = fullnodeURL(for: network) else { return nil }
+        let apiBase = base.replacingOccurrences(of: "/v1", with: "")
+        return "\(apiBase)/keyless/prover/v0"
     }
 }

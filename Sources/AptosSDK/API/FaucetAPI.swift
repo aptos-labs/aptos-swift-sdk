@@ -1,33 +1,27 @@
 import Foundation
 
-/// Faucet API for funding accounts on devnet/testnet.
+/// Faucet operations for test networks.
 public struct FaucetAPI: Sendable {
     private let config: AptosConfig
     private let client: AptosHTTPClient
 
-    public init(config: AptosConfig, client: AptosHTTPClient) {
+    init(config: AptosConfig, client: AptosHTTPClient) {
         self.config = config
         self.client = client
     }
 
-    /// Fund an account with test APT tokens.
-    ///
-    /// - Parameters:
-    ///   - address: The account address to fund.
-    ///   - amount: The amount of APT (in octas) to fund. Defaults to 100_000_000 (1 APT).
-    /// - Returns: The transaction hashes from the faucet.
+    /// Funds an account with test tokens.
     public func fundAccount(
-        address: AccountAddress,
+        _ address: AccountAddress,
         amount: UInt64 = 100_000_000
-    ) async throws -> FaucetFundResponse {
-        let body = FaucetFundRequest(
-            address: address.toString(),
-            amount: amount
-        )
-        let response: AptosResponse<FaucetFundResponse> = try await client.postFaucet(
-            body: body,
-            originMethod: "FaucetAPI.fundAccount"
-        )
-        return response.data
+    ) async throws -> FaucetResponse {
+        let url = try config.getFaucetURL()
+        let body = FaucetFundRequest(address: address.toHex(), amount: amount)
+        return try await client.post(url: url, path: "fund", body: body, apiType: .faucet)
     }
+}
+
+private struct FaucetFundRequest: Encodable {
+    let address: String
+    let amount: UInt64
 }

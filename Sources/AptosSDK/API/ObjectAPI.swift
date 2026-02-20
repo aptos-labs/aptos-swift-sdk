@@ -1,24 +1,21 @@
 import Foundation
 
-/// Object-related API operations.
+/// Object-related queries.
 public struct ObjectAPI: Sendable {
     private let config: AptosConfig
     private let client: AptosHTTPClient
 
-    public init(config: AptosConfig, client: AptosHTTPClient) {
+    init(config: AptosConfig, client: AptosHTTPClient) {
         self.config = config
         self.client = client
     }
 
-    /// Get object data by object address using the ObjectCore resource.
-    public func getObjectDataByObjectAddress(
-        objectAddress: AccountAddress,
-        minimumLedgerVersion: UInt64? = nil
+    /// Gets an object resource at the given address.
+    public func getObjectResource(
+        _ objectAddress: AccountAddress,
+        resourceType: String
     ) async throws -> AccountResource {
-        let account = AccountAPI(config: config, client: client)
-        return try await account.getAccountResource(
-            address: objectAddress,
-            resourceType: "0x1::object::ObjectCore"
-        )
+        let accountAPI = AccountAPI(config: config, client: client)
+        return try await accountAPI.getAccountResource(objectAddress, resourceType: resourceType)
     }
 }

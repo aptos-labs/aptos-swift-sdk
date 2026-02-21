@@ -11,6 +11,7 @@ public enum AptosError: Error, Sendable, LocalizedError {
     case api(APIError)
     case transaction(TransactionError)
     case keyless(KeylessError)
+    case multiSignature(MultiSignatureError)
     case unauthorized(String)
     case rateLimited(String)
     case internalError(String)
@@ -29,6 +30,7 @@ public enum AptosError: Error, Sendable, LocalizedError {
         case let .api(e): "API error: \(e.localizedDescription)"
         case let .transaction(e): "Transaction error: \(e.localizedDescription)"
         case let .keyless(e): "Keyless error: \(e.localizedDescription)"
+        case let .multiSignature(e): "Multi-signature error: \(e.localizedDescription)"
         case let .unauthorized(msg): "Unauthorized: \(msg)"
         case let .rateLimited(msg): "Rate limited: \(msg)"
         case let .internalError(msg): "Internal error: \(msg)"
@@ -214,6 +216,29 @@ public enum KeylessError: Error, Sendable, LocalizedError {
         case let .proofExpired(msg): "Proof expired: \(msg)"
         case let .invalidEphemeralKeyPair(msg): "Invalid ephemeral key pair: \(msg)"
         case let .invalidConfiguration(msg): "Invalid configuration: \(msg)"
+        }
+    }
+}
+
+// MARK: - MultiSignatureError
+
+public enum MultiSignatureError: Error, Sendable, LocalizedError {
+    case invalidThreshold(message: String)
+    case insufficientSignatures(required: Int, provided: Int)
+    case duplicateSignerIndex(index: Int)
+    case invalidSignerIndex(index: Int, totalKeys: Int)
+    case tooManyKeys(count: Int, maximum: Int)
+
+    public var errorDescription: String? {
+        switch self {
+        case let .invalidThreshold(msg): "Invalid threshold: \(msg)"
+        case let .insufficientSignatures(required, provided):
+            "Insufficient signatures: required \(required), provided \(provided)"
+        case let .duplicateSignerIndex(index): "Duplicate signer index: \(index)"
+        case let .invalidSignerIndex(index, totalKeys):
+            "Invalid signer index \(index) for \(totalKeys) keys"
+        case let .tooManyKeys(count, maximum):
+            "Too many keys: \(count) exceeds maximum of \(maximum)"
         }
     }
 }

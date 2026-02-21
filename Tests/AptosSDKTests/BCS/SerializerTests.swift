@@ -1,3 +1,4 @@
+import BigInt
 import Foundation
 import Testing
 @testable import AptosSDK
@@ -127,5 +128,67 @@ struct SerializerTests {
         s.serializeU32(100)
         let bytes = s.toBytes()
         #expect(bytes == Data([0x01, 0x2A, 0x64, 0x00, 0x00, 0x00]))
+    }
+
+    // MARK: - i256
+
+    @Test("Serialize i256 zero")
+    func serializeI256Zero() throws {
+        var s = Serializer()
+        try s.serializeI256(BigInt(0))
+        let bytes = s.toBytes()
+        #expect(bytes == Data(repeating: 0, count: 32))
+    }
+
+    @Test("Serialize i256 positive")
+    func serializeI256Positive() throws {
+        var s = Serializer()
+        try s.serializeI256(BigInt(1))
+        let bytes = s.toBytes()
+        var expected = Data(repeating: 0, count: 32)
+        expected[0] = 0x01
+        #expect(bytes == expected)
+    }
+
+    @Test("Serialize i256 negative one")
+    func serializeI256NegativeOne() throws {
+        var s = Serializer()
+        try s.serializeI256(BigInt(-1))
+        let bytes = s.toBytes()
+        // -1 in two's complement = all 0xFF
+        #expect(bytes == Data(repeating: 0xFF, count: 32))
+    }
+
+    @Test("Serialize i256 max value")
+    func serializeI256Max() throws {
+        let maxI256 = (BigInt(1) << 255) - 1
+        var s = Serializer()
+        try s.serializeI256(maxI256)
+        let bytes = s.toBytes()
+        // Max positive: 0x7F at byte 31, 0xFF at bytes 0-30
+        var expected = Data(repeating: 0xFF, count: 32)
+        expected[31] = 0x7F
+        #expect(bytes == expected)
+    }
+
+    @Test("Serialize i256 min value")
+    func serializeI256Min() throws {
+        let minI256 = -(BigInt(1) << 255)
+        var s = Serializer()
+        try s.serializeI256(minI256)
+        let bytes = s.toBytes()
+        // Min negative: 0x80 at byte 31, 0x00 at bytes 0-30
+        var expected = Data(repeating: 0, count: 32)
+        expected[31] = 0x80
+        #expect(bytes == expected)
+    }
+
+    @Test("Serialize i256 out of range throws")
+    func serializeI256OutOfRange() throws {
+        let tooLarge = BigInt(1) << 255
+        var s = Serializer()
+        #expect(throws: AptosError.self) {
+            try s.serializeI256(tooLarge)
+        }
     }
 }

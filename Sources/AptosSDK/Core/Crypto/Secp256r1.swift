@@ -66,8 +66,13 @@ extension Secp256r1PublicKey: BCSSerializable, BCSDeserializable {
 // MARK: - Secp256r1PrivateKey
 
 /// Secp256r1 (P-256) private key (32 bytes).
-public struct Secp256r1PrivateKey: Sendable, Equatable {
-    public let data: Data
+///
+/// Conforms to `CustomStringConvertible` and `CustomDebugStringConvertible`
+/// with redacted output to prevent accidental logging of key material.
+public struct Secp256r1PrivateKey: Sendable, Equatable, CustomStringConvertible,
+    CustomDebugStringConvertible
+{
+    public private(set) var data: Data
 
     public static let length = 32
 
@@ -119,6 +124,19 @@ public struct Secp256r1PrivateKey: Sendable, Equatable {
         let sig = try key.signature(for: message)
         return try Secp256r1Signature(data: Data(sig.rawRepresentation))
     }
+
+    /// Overwrites the private key data with zeros.
+    ///
+    /// Call this when the key is no longer needed. Note that Swift value-type
+    /// copies cannot be automatically zeroized — only this particular copy
+    /// is cleared.
+    public mutating func zeroize() {
+        let count = data.count
+        data = Data(repeating: 0, count: count)
+    }
+
+    public var description: String { "Secp256r1PrivateKey(<REDACTED>)" }
+    public var debugDescription: String { "Secp256r1PrivateKey(<REDACTED>)" }
 
     private init(unchecked data: Data) {
         self.data = data

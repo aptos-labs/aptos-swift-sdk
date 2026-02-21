@@ -101,6 +101,28 @@ struct TransactionTests {
         #expect(decoded == chainId)
     }
 
+    @Test("TransactionAPI has getTransactions method")
+    func getTransactionsMethodExists() throws {
+        // Compile-time check: verify getTransactions exists on TransactionAPI
+        // by referencing its type signature through a closure
+        let _: (TransactionAPI) -> (UInt64?, Int?) async throws -> [TransactionResponse] =
+            { api in { start, limit in try await api.getTransactions(start: start, limit: limit) } }
+    }
+
+    @Test("TransactionAPI has estimateGasAmount method")
+    func estimateGasAmountMethodExists() throws {
+        // Compile-time check: verify estimateGasAmount exists on TransactionAPI
+        let _:
+            (TransactionAPI) -> (AnyRawTransaction, (any BCSSerializable)?) async throws -> UInt64 =
+                { api in
+                    { txn, key in
+                        try await api.estimateGasAmount(
+                            transaction: txn, signerPublicKey: key
+                        )
+                    }
+                }
+    }
+
     @Test("SimpleTransaction signing")
     func simpleTransactionSigning() throws {
         let account = try Ed25519Account.generate()

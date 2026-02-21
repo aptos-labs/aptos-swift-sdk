@@ -13,12 +13,14 @@ public struct MultiKey: Sendable, Equatable {
     /// Creates a new MultiKey.
     public init(publicKeys: [AnyPublicKey], signaturesRequired: UInt8) throws {
         guard !publicKeys.isEmpty else {
-            throw AptosError.invalidArgument("MultiKey requires at least one public key")
+            throw AptosError.multiSignature(.invalidThreshold(
+                message: "MultiKey requires at least one public key"
+            ))
         }
         guard signaturesRequired > 0, signaturesRequired <= publicKeys.count else {
-            throw AptosError.invalidArgument(
-                "signaturesRequired (\(signaturesRequired)) must be between 1 and \(publicKeys.count)"
-            )
+            throw AptosError.multiSignature(.invalidThreshold(
+                message: "signaturesRequired (\(signaturesRequired)) must be between 1 and \(publicKeys.count)"
+            ))
         }
         self.publicKeys = publicKeys
         self.signaturesRequired = signaturesRequired
@@ -99,14 +101,24 @@ public struct MultiEd25519PublicKey: Sendable, Equatable {
     public let publicKeys: [Ed25519PublicKey]
     public let threshold: UInt8
 
+    /// Maximum number of keys allowed in a MultiEd25519 public key.
+    public static let maxKeys = 32
+
     public init(publicKeys: [Ed25519PublicKey], threshold: UInt8) throws {
         guard !publicKeys.isEmpty else {
-            throw AptosError.invalidArgument("MultiEd25519 requires at least one key")
+            throw AptosError.multiSignature(.invalidThreshold(
+                message: "MultiEd25519 requires at least one key"
+            ))
+        }
+        guard publicKeys.count <= Self.maxKeys else {
+            throw AptosError.multiSignature(.tooManyKeys(
+                count: publicKeys.count, maximum: Self.maxKeys
+            ))
         }
         guard threshold > 0, threshold <= publicKeys.count else {
-            throw AptosError.invalidArgument(
-                "threshold (\(threshold)) must be between 1 and \(publicKeys.count)"
-            )
+            throw AptosError.multiSignature(.invalidThreshold(
+                message: "threshold (\(threshold)) must be between 1 and \(publicKeys.count)"
+            ))
         }
         self.publicKeys = publicKeys
         self.threshold = threshold
@@ -154,6 +166,39 @@ public struct MultiEd25519Signature: Sendable, Equatable {
     public init(signatures: [Ed25519Signature], bitmap: Data) {
         self.signatures = signatures
         self.bitmap = bitmap
+    }
+
+    /// Creates a MultiEd25519Signature from signatures and their key indices.
+    public static func fromSignaturesWithIndices(
+        signatures: [(index: Int, signature: Ed25519Signature)],
+        totalKeys: Int
+    ) throws -> Self {
+        // Validate no duplicate indices
+        var seen = Set<Int>()
+        for entry in signatures {
+            guard entry.index >= 0, entry.index < totalKeys else {
+                throw AptosError.multiSignature(.invalidSignerIndex(
+                    index: entry.index, totalKeys: totalKeys
+                ))
+            }
+            guard seen.insert(entry.index).inserted else {
+                throw AptosError.multiSignature(.duplicateSignerIndex(index: entry.index))
+            }
+        }
+
+        let sorted = signatures.sorted { $0.index < $1.index }
+        var bitmapBytes = [UInt8](repeating: 0, count: 4)
+        for entry in sorted {
+            let byteIndex = entry.index / 8
+            let bitIndex = entry.index % 8
+            if byteIndex < 4 {
+                bitmapBytes[byteIndex] |= (1 << (7 - bitIndex))
+            }
+        }
+        return Self(
+            signatures: sorted.map(\.signature),
+            bitmap: Data(bitmapBytes)
+        )
     }
 }
 

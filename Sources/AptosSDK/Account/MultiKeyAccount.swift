@@ -19,12 +19,14 @@ public struct MultiKeyAccount: Sendable {
     /// Creates a multi-key account.
     public init(multiKey: MultiKey, signers: [any AptosAccount], signerIndices: [Int]) throws {
         guard signers.count == signerIndices.count else {
-            throw AptosError.invalidArgument("signers and signerIndices must have the same count")
+            throw AptosError.multiSignature(.insufficientSignatures(
+                required: signerIndices.count, provided: signers.count
+            ))
         }
         guard signers.count >= Int(multiKey.signaturesRequired) else {
-            throw AptosError.invalidArgument(
-                "Need at least \(multiKey.signaturesRequired) signers, got \(signers.count)"
-            )
+            throw AptosError.multiSignature(.insufficientSignatures(
+                required: Int(multiKey.signaturesRequired), provided: signers.count
+            ))
         }
         self.multiKey = multiKey
         self.signers = signers

@@ -193,24 +193,74 @@ public struct TransactionAPI: Sendable {
         )
     }
 
+    /// Gets a paginated list of transactions.
+    public func getTransactions(
+        start: UInt64? = nil,
+        limit: Int? = nil
+    ) async throws -> [TransactionResponse] {
+        let url = try config.getFullnodeURL()
+        var params: [String: String] = [:]
+        if let start { params["start"] = String(start) }
+        if let limit { params["limit"] = String(limit) }
+        return try await client.get(url: url, path: "transactions", params: params)
+    }
+
     // MARK: - Simulate
 
     /// Simulates a transaction without actually submitting it.
+    ///
+    /// When `signerPublicKey` is provided, a proper authenticator is constructed
+    /// so the node can determine the signing scheme for simulation.
     public func simulate(
         transaction: AnyRawTransaction,
-        signerPublicKey _: (any BCSSerializable)? = nil
+        signerPublicKey: (any BCSSerializable)? = nil
     ) async throws -> [TransactionResponse] {
         let url = try config.getFullnodeURL()
 
         let rawTxn = transaction.rawTransaction
-        // Create a simulation signed transaction with empty authenticator
-        let auth = TransactionAuthenticator.singleSender(.noAccountAuthenticator)
+
+        let accountAuth: AccountAuthenticator
+        if let pubKey = signerPublicKey as? AnyPublicKey {
+            let zeroSig = try Ed25519Signature(data: Data(repeating: 0, count: 64))
+            accountAuth = .singleKey(
+                publicKey: pubKey,
+                signature: .ed25519(zeroSig)
+            )
+        } else if let pubKey = signerPublicKey as? Ed25519PublicKey {
+            let zeroSig = try Ed25519Signature(data: Data(repeating: 0, count: 64))
+            accountAuth = .ed25519(publicKey: pubKey, signature: zeroSig)
+        } else {
+            accountAuth = .noAccountAuthenticator
+        }
+
+        let auth = TransactionAuthenticator.singleSender(accountAuth)
         let signedTxn = SignedTransaction(rawTransaction: rawTxn, authenticator: auth)
         let bcsBytes = try signedTxn.toBytes()
 
         return try await client.postBCS(
             url: url, path: "transactions/simulate", body: bcsBytes
         )
+    }
+
+    // MARK: - Gas Estimation
+
+    /// Estimates the gas amount for a transaction by simulating it.
+    ///
+    /// Returns the estimated gas with a 1.5x safety margin applied.
+    public func estimateGasAmount(
+        transaction: AnyRawTransaction,
+        signerPublicKey: (any BCSSerializable)? = nil
+    ) async throws -> UInt64 {
+        let results = try await simulate(
+            transaction: transaction, signerPublicKey: signerPublicKey
+        )
+        guard let first = results.first, let gasUsedStr = first.gasUsed,
+              let gasUsed = UInt64(gasUsedStr)
+        else {
+            throw AptosError.transaction(.simulationFailed("No gas usage in simulation response"))
+        }
+        // Apply 1.5x safety margin
+        return gasUsed + (gasUsed / 2)
     }
 }
 

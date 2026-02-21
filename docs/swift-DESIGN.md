@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Aptos Swift SDK provides a comprehensive, type-safe interface for interacting with the Aptos blockchain from Apple platforms. It targets **Tier 2 (P0 + P1 Compliance)** with the [aptos-sdk-specs v1.0.0](https://github.com/aptos-labs/aptos-sdk-specs), implementing all P0 (required) and P1 (preferred) requirements.
+The Aptos Swift SDK provides a comprehensive, type-safe interface for interacting with the Aptos blockchain from Apple platforms. It targets **Tier 3 (P0 + P1 + P2 Compliance)** with the [aptos-sdk-specs v1.0.0](https://github.com/aptos-labs/aptos-sdk-specs), implementing all P0 (required), P1 (preferred), and P2 (nice-to-have) requirements. Only BLS12-381 multi-sig and code generation are intentionally skipped.
 
 **Key design principles:**
 - **Apple-native**: CryptoKit for verification/P-256, URLSession for networking, `actor` for concurrency
@@ -82,6 +82,7 @@ AptosClient
     │       ├── Ed25519Account (legacy scheme + fromMnemonic)
     │       ├── SingleKeyAccount (unified scheme + AnyPrivateKey)
     │       ├── MultiKeyAccount (M-of-N)
+    │       ├── MultiEd25519Account (legacy multi-sig)
     │       └── KeylessAccount (OIDC)
     ├── Core / Crypto
     │       ├── Ed25519 (CTweetNaCl for signing, CryptoKit for verification)
@@ -89,6 +90,7 @@ AptosClient
     │       ├── Secp256r1 (CryptoKit P256)
     │       ├── AnyPublicKey / AnySignature (type-erased wrappers)
     │       ├── MultiKey / MultiEd25519 (multi-sig primitives)
+    │       ├── WebAuthn (Secp256r1 passkey signatures)
     │       ├── AuthenticationKey (key → address derivation)
     │       ├── Mnemonic (BIP-39: generate, validate, toSeed)
     │       ├── HDKey (SLIP-0010 Ed25519 + BIP-32 Secp256k1)
@@ -132,6 +134,7 @@ public struct Serializer: ~Copyable {
     mutating func serializeU128(_ value: BigUInt)
     mutating func serializeU256(_ value: BigUInt)
     mutating func serializeI128(_ value: BigInt)         // Signed 16-byte two's complement
+    mutating func serializeI256(_ value: BigInt)         // Signed 32-byte two's complement
     mutating func serializeBytes(_ value: Data)          // ULEB128 length prefix
     mutating func serializeFixedBytes(_ value: Data)     // No length prefix
     mutating func serializeStr(_ value: String)
@@ -151,6 +154,7 @@ public struct Deserializer: ~Copyable {
     mutating func deserializeBool() throws -> Bool
     mutating func deserializeU8() throws -> UInt8
     mutating func deserializeI128() throws -> BigInt     // Signed 16-byte two's complement
+    mutating func deserializeI256() throws -> BigInt     // Signed 32-byte two's complement
     // ... matching methods
     mutating func assertFinished() throws
 }
@@ -192,6 +196,7 @@ public func bcsFromBytes<T: BCSDeserializable>(_ type: T.Type, _ data: Data) thr
 | u128     | `BigUInt` |
 | u256     | `BigUInt` |
 | i128     | `BigInt`  |
+| i256     | `BigInt`  |
 | bytes    | `Data`    |
 | string   | `String`  |
 | vector<T>| `[T]`    |
@@ -394,6 +399,7 @@ public protocol AptosAccount: Sendable {
 | `Ed25519Account` | Ed25519 (0) | Ed25519 only | Legacy accounts, mnemonic derivation |
 | `SingleKeyAccount` | SingleKey (2) | Ed25519/Secp256k1/Secp256r1 | Recommended for new accounts |
 | `MultiKeyAccount` | MultiKey (3) | Mixed key types | M-of-N multi-sig |
+| `MultiEd25519Account` | MultiEd25519 (1) | Ed25519 only | Legacy multi-sig |
 | `KeylessAccount` | SingleKey (2) | OIDC + ephemeral | Social login |
 
 ### Type-Erased Key Wrappers
@@ -714,7 +720,8 @@ All errors conform to `Error`, `Sendable`, and `LocalizedError`.
 
 ### Private Key Protection
 
-- Private key types (`Ed25519PrivateKey`, `Secp256k1PrivateKey`, `Secp256r1PrivateKey`) do **not** conform to `CustomStringConvertible` — preventing accidental logging.
+- Private key types (`Ed25519PrivateKey`, `Secp256k1PrivateKey`, `Secp256r1PrivateKey`) conform to `CustomStringConvertible` and `CustomDebugStringConvertible` with **redacted** output — `String(describing:)` and `print()` never leak key bytes.
+- Each private key type provides a `zeroize()` method that overwrites the internal `Data` buffer with zeros. Note: Swift value-type copies cannot be auto-zeroized; only the specific copy is cleared.
 - AIP-80 format provides unambiguous serialization with scheme prefix.
 - All key types validate lengths on construction (fail-fast).
 - `SingleKeyAccount` exposes the private key via `AnyPrivateKey` enum for controlled access.
@@ -741,7 +748,7 @@ All errors conform to `Error`, `Sendable`, and `LocalizedError`.
 
 ## Test Vectors
 
-The SDK includes ~270 deterministic test cases across 21 test suites. Seven JSON test vector files from the [aptos-sdk-specs](https://github.com/aptos-labs/aptos-sdk-specs) test suite ensure cross-implementation compatibility:
+The SDK includes ~315 deterministic test cases across 24 test suites. Seven JSON test vector files from the [aptos-sdk-specs](https://github.com/aptos-labs/aptos-sdk-specs) test suite ensure cross-implementation compatibility:
 
 | File | Test Cases | Coverage |
 |------|-----------|----------|
@@ -857,7 +864,8 @@ aptos-swift-sdk/
 │       │   ├── Account.swift             # AptosAccount protocol + publicKeyBytes
 │       │   ├── Ed25519Account.swift      # Legacy Ed25519 + fromMnemonic()
 │       │   ├── SingleKeyAccount.swift    # Unified single-key + AnyPrivateKey
-│       │   └── MultiKeyAccount.swift     # M-of-N multi-sig
+│       │   ├── MultiKeyAccount.swift     # M-of-N multi-sig
+│       │   └── MultiEd25519Account.swift # Legacy multi-Ed25519
 │       ├── Advanced/
 │       │   ├── KeylessAccount.swift      # OIDC-based keyless
 │       │   ├── EphemeralKeyPair.swift    # Short-lived keys
@@ -898,6 +906,7 @@ aptos-swift-sdk/
 │       │       ├── AnyPublicKey.swift    # Type-erased keys
 │       │       ├── AnySignature.swift    # Type-erased sigs
 │       │       ├── MultiKey.swift        # Multi-key crypto
+│       │       ├── WebAuthn.swift       # WebAuthn/passkey signatures
 │       │       ├── KeylessPublicKey.swift # Keyless public key
 │       │       ├── PrivateKey.swift       # AIP-80 utilities
 │       │       ├── Mnemonic.swift        # BIP-39 implementation

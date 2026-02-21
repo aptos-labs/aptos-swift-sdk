@@ -28,7 +28,10 @@ public struct KeylessAccount: Sendable {
     public let ephemeralKeyPair: EphemeralKeyPair
 
     /// The zero-knowledge proof from the prover service.
-    public let proof: Data
+    public var proof: Data
+
+    /// Optional proof expiry (Unix timestamp in seconds).
+    public var proofExpiryDateSecs: UInt64?
 
     /// The OIDC JWT token.
     public let jwt: String
@@ -52,6 +55,7 @@ public struct KeylessAccount: Sendable {
     ///   - pepper: The pepper from the pepper service (31 bytes)
     ///   - uidKey: The JWT claim key for the user ID (default: "sub")
     ///   - uidVal: The user ID value from the JWT
+    ///   - proofExpiryDateSecs: Optional expiry for the proof
     ///   - address: Optional override address (for rotated accounts)
     public init(
         issuer: String,
@@ -61,6 +65,7 @@ public struct KeylessAccount: Sendable {
         pepper: Data,
         uidKey: String = "sub",
         uidVal: String,
+        proofExpiryDateSecs: UInt64? = nil,
         address: AccountAddress? = nil
     ) throws {
         self.ephemeralKeyPair = ephemeralKeyPair
@@ -69,6 +74,7 @@ public struct KeylessAccount: Sendable {
         self.pepper = pepper
         self.uidKey = uidKey
         self.uidVal = uidVal
+        self.proofExpiryDateSecs = proofExpiryDateSecs
 
         // Compute identity commitment: SHA3-256(pepper || uidKey || uidVal)
         var commitData = Data()
@@ -88,9 +94,68 @@ public struct KeylessAccount: Sendable {
         }
     }
 
-    /// Whether the ephemeral key pair has expired.
+    /// Whether the proof has expired.
+    public var isProofExpired: Bool {
+        guard let expiry = proofExpiryDateSecs else { return false }
+        return UInt64(Date().timeIntervalSince1970) >= expiry
+    }
+
+    /// Whether the JWT has expired (based on `exp` claim).
+    public var isJWTExpired: Bool {
+        guard let exp = Self.extractJWTExpiry(jwt) else { return false }
+        return UInt64(Date().timeIntervalSince1970) >= exp
+    }
+
+    /// Whether the ephemeral key pair, proof, or JWT has expired.
     public var isExpired: Bool {
-        ephemeralKeyPair.isExpired
+        ephemeralKeyPair.isExpired || isProofExpired || isJWTExpired
+    }
+
+    /// Refreshes the proof using the keyless API.
+    public mutating func refreshProof(using keylessAPI: KeylessAPI) async throws {
+        let newProof = try await keylessAPI.getProof(
+            jwt: jwt,
+            ephemeralPublicKey: ephemeralKeyPair.publicKey.data,
+            pepper: pepper,
+            uidKey: uidKey
+        )
+        proof = newProof
+        proofExpiryDateSecs = nil
+    }
+
+    /// Refreshes the proof only if it has expired.
+    @discardableResult
+    public mutating func refreshProofIfNeeded(using keylessAPI: KeylessAPI) async throws -> Bool {
+        guard isProofExpired else { return false }
+        try await refreshProof(using: keylessAPI)
+        return true
+    }
+
+    /// Extracts the `exp` claim from a JWT payload via base64url decoding.
+    private static func extractJWTExpiry(_ jwt: String) -> UInt64? {
+        let parts = jwt.split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+        var base64 = String(parts[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        // Pad to multiple of 4
+        while base64.count % 4 != 0 {
+            base64.append("=")
+        }
+        guard let data = Data(base64Encoded: base64) else { return nil }
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        if let exp = json["exp"] as? UInt64 {
+            return exp
+        }
+        if let exp = json["exp"] as? Int {
+            return UInt64(exp)
+        }
+        if let exp = json["exp"] as? Double {
+            return UInt64(exp)
+        }
+        return nil
     }
 }
 
@@ -107,8 +172,11 @@ extension KeylessAccount: AptosAccount {
     }
 
     public func sign(message: Data) throws -> AnySignature {
-        guard !isExpired else {
+        guard !ephemeralKeyPair.isExpired else {
             throw AptosError.keyless(.invalidConfiguration("Keyless account ephemeral key has expired"))
+        }
+        if isProofExpired {
+            throw AptosError.keyless(.proofExpired("Proof has expired"))
         }
         let ephemeralSig = try ephemeralKeyPair.sign(message)
 

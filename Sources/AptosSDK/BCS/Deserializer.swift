@@ -145,6 +145,17 @@ public struct Deserializer: ~Copyable, Sendable {
         return BigInt(unsigned)
     }
 
+    /// Deserializes a signed Int256 from 32 bytes in two's complement little-endian order.
+    public mutating func deserializeI256() throws -> BigInt {
+        let bytes = try readBytes(count: 32)
+        let unsigned = BigUInt.fromLittleEndianBytes(bytes)
+        let maxPositive = (BigUInt(1) << 255) - 1
+        if unsigned > maxPositive {
+            return BigInt(unsigned) - (BigInt(1) << 256)
+        }
+        return BigInt(unsigned)
+    }
+
     // MARK: - Bytes and Strings
 
     /// Deserializes a UTF-8 string (ULEB128 length prefix + bytes).

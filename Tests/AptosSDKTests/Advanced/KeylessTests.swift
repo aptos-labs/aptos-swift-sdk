@@ -142,4 +142,132 @@ struct KeylessTests {
         let decoded = try bcsFromBytes(KeylessPublicKey.self, data)
         #expect(decoded == pubKey)
     }
+
+    // MARK: - Blinding Factor Tests
+
+    @Test("New EphemeralKeyPair has 31-byte blinding factor")
+    func blindingFactorGenerated() throws {
+        let ekp = try EphemeralKeyPair()
+        #expect(ekp.blindingFactor != nil)
+        #expect(ekp.blindingFactor?.count == 31)
+    }
+
+    @Test("Nonce with blinding factor differs from nonce without")
+    func nonceWithBlindingFactorDiffers() throws {
+        let privKey = Ed25519PrivateKey.generate()
+        let expiry = UInt64(Date().timeIntervalSince1970) + 3600
+
+        let ekpWithBlinding = try EphemeralKeyPair(
+            privateKey: privKey,
+            expiryDateSecs: expiry,
+            blindingFactor: Data(repeating: 0x42, count: 31)
+        )
+        let ekpWithout = try EphemeralKeyPair(
+            privateKey: privKey,
+            expiryDateSecs: expiry,
+            blindingFactor: nil
+        )
+
+        #expect(ekpWithBlinding.nonce != ekpWithout.nonce)
+    }
+
+    @Test("EphemeralKeyPair BCS roundtrip with blinding factor")
+    func ephemeralBCSRoundtripWithBlinding() throws {
+        let ekp = try EphemeralKeyPair()
+        let data = try bcsToBytes(ekp)
+        let decoded = try bcsFromBytes(EphemeralKeyPair.self, data)
+        #expect(decoded.privateKey == ekp.privateKey)
+        #expect(decoded.expiryDateSecs == ekp.expiryDateSecs)
+        #expect(decoded.blindingFactor == ekp.blindingFactor)
+        #expect(decoded.nonce == ekp.nonce)
+    }
+
+    // MARK: - Proof Expiry Tests
+
+    @Test("isProofExpired false when no expiry set")
+    func proofNotExpiredNoExpiry() throws {
+        let ekp = try EphemeralKeyPair()
+        let account = try KeylessAccount(
+            issuer: "https://accounts.google.com",
+            ephemeralKeyPair: ekp,
+            proof: Data(repeating: 0, count: 64),
+            jwt: "test",
+            pepper: Data(repeating: 0x03, count: 31),
+            uidVal: "user000"
+        )
+        #expect(!account.isProofExpired)
+    }
+
+    @Test("isProofExpired true when past expiry")
+    func proofExpiredPastExpiry() throws {
+        let ekp = try EphemeralKeyPair()
+        let pastExpiry = UInt64(Date().timeIntervalSince1970) - 100
+        let account = try KeylessAccount(
+            issuer: "https://accounts.google.com",
+            ephemeralKeyPair: ekp,
+            proof: Data(repeating: 0, count: 64),
+            jwt: "test",
+            pepper: Data(repeating: 0x03, count: 31),
+            uidVal: "user000",
+            proofExpiryDateSecs: pastExpiry
+        )
+        #expect(account.isProofExpired)
+    }
+
+    @Test("isExpired checks both ephemeral key and proof")
+    func isExpiredChecksBoth() throws {
+        let ekp = try EphemeralKeyPair()
+        let futureExpiry = UInt64(Date().timeIntervalSince1970) + 7200
+        let account = try KeylessAccount(
+            issuer: "https://accounts.google.com",
+            ephemeralKeyPair: ekp,
+            proof: Data(repeating: 0, count: 64),
+            jwt: "test",
+            pepper: Data(repeating: 0x03, count: 31),
+            uidVal: "user000",
+            proofExpiryDateSecs: futureExpiry
+        )
+        // Neither ephemeral key nor proof expired
+        #expect(!account.isExpired)
+    }
+
+    @Test("sign() throws on expired proof")
+    func signThrowsOnExpiredProof() throws {
+        let ekp = try EphemeralKeyPair()
+        let pastExpiry = UInt64(Date().timeIntervalSince1970) - 100
+        let account = try KeylessAccount(
+            issuer: "https://accounts.google.com",
+            ephemeralKeyPair: ekp,
+            proof: Data(repeating: 0, count: 64),
+            jwt: "test",
+            pepper: Data(repeating: 0x03, count: 31),
+            uidVal: "user000",
+            proofExpiryDateSecs: pastExpiry
+        )
+
+        #expect(throws: AptosError.self) {
+            _ = try account.sign(message: Data("test".utf8))
+        }
+    }
+
+    @Test("JWT expiry extraction works")
+    func jwtExpiryExtraction() throws {
+        // Create a JWT with exp claim: {"alg":"none"}.{"sub":"user","exp":1000000}.
+        let header = Data(#"{"alg":"none"}"#.utf8).base64EncodedString()
+        let payload = Data(#"{"sub":"user","exp":1000000}"#.utf8).base64EncodedString()
+        let jwt = "\(header).\(payload).sig"
+
+        let ekp = try EphemeralKeyPair()
+        let account = try KeylessAccount(
+            issuer: "https://accounts.google.com",
+            ephemeralKeyPair: ekp,
+            proof: Data(repeating: 0, count: 64),
+            jwt: jwt,
+            pepper: Data(repeating: 0x03, count: 31),
+            uidVal: "user000"
+        )
+
+        // exp=1000000 is far in the past, so JWT should be expired
+        #expect(account.isJWTExpired)
+    }
 }

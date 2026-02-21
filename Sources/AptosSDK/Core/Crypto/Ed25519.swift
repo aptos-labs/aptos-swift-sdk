@@ -57,10 +57,12 @@ extension Ed25519PublicKey: BCSSerializable, BCSDeserializable {
 
 /// Ed25519 private key (32 bytes).
 ///
-/// Private keys do not conform to `CustomStringConvertible` to prevent
-/// accidental logging.
-public struct Ed25519PrivateKey: Sendable, Equatable {
-    public let data: Data
+/// Conforms to `CustomStringConvertible` and `CustomDebugStringConvertible`
+/// with redacted output to prevent accidental logging of key material.
+public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
+    CustomDebugStringConvertible
+{
+    public private(set) var data: Data
 
     public static let length = 32
 
@@ -126,6 +128,19 @@ public struct Ed25519PrivateKey: Sendable, Equatable {
         crypto_sign_ed25519_detached(&sig, msg, UInt64(msg.count), sk)
         return try Ed25519Signature(data: Data(sig))
     }
+
+    /// Overwrites the private key data with zeros.
+    ///
+    /// Call this when the key is no longer needed. Note that Swift value-type
+    /// copies cannot be automatically zeroized — only this particular copy
+    /// is cleared.
+    public mutating func zeroize() {
+        let count = data.count
+        data = Data(repeating: 0, count: count)
+    }
+
+    public var description: String { "Ed25519PrivateKey(<REDACTED>)" }
+    public var debugDescription: String { "Ed25519PrivateKey(<REDACTED>)" }
 
     /// Internal init that skips validation (for generate).
     private init(unchecked data: Data) {

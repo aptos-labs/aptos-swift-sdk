@@ -132,6 +132,22 @@ public struct Serializer: ~Copyable, Sendable {
         buffer.append(data)
     }
 
+    /// Serializes a signed Int256 value (as BigInt) as 32 bytes in two's complement little-endian.
+    public mutating func serializeI256(_ value: BigInt) throws {
+        let minI256 = -(BigInt(1) << 255)
+        let maxI256 = (BigInt(1) << 255) - 1
+        guard value >= minI256, value <= maxI256 else {
+            throw AptosError.serialization(.outOfRange("Value \(value) exceeds I256 range"))
+        }
+        let unsigned = if value < 0 {
+            BigUInt(value + (BigInt(1) << 256))
+        } else {
+            BigUInt(value)
+        }
+        let data = unsigned.littleEndianData(count: 32)
+        buffer.append(data)
+    }
+
     // MARK: - Bytes and Strings
 
     /// Serializes a string as ULEB128 length prefix + UTF-8 bytes.

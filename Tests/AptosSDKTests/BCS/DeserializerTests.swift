@@ -1,3 +1,4 @@
+import BigInt
 import Foundation
 import Testing
 @testable import AptosSDK
@@ -113,5 +114,70 @@ struct DeserializerTests {
 
         var d4 = Deserializer(data: Data([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]))
         #expect(try d4.deserializeI64() == -1)
+    }
+
+    // MARK: - i256
+
+    @Test("Deserialize i256 zero")
+    func deserializeI256Zero() throws {
+        var d = Deserializer(data: Data(repeating: 0, count: 32))
+        let val = try d.deserializeI256()
+        #expect(val == BigInt(0))
+    }
+
+    @Test("Deserialize i256 positive")
+    func deserializeI256Positive() throws {
+        var input = Data(repeating: 0, count: 32)
+        input[0] = 0x01
+        var d = Deserializer(data: input)
+        let val = try d.deserializeI256()
+        #expect(val == BigInt(1))
+    }
+
+    @Test("Deserialize i256 negative one")
+    func deserializeI256NegativeOne() throws {
+        var d = Deserializer(data: Data(repeating: 0xFF, count: 32))
+        let val = try d.deserializeI256()
+        #expect(val == BigInt(-1))
+    }
+
+    @Test("i256 roundtrip positive")
+    func i256RoundtripPositive() throws {
+        let original = BigInt(123_456_789)
+        var s = Serializer()
+        try s.serializeI256(original)
+        var d = Deserializer(data: s.toBytes())
+        let decoded = try d.deserializeI256()
+        #expect(decoded == original)
+    }
+
+    @Test("i256 roundtrip negative")
+    func i256RoundtripNegative() throws {
+        let original = BigInt(-987_654_321)
+        var s = Serializer()
+        try s.serializeI256(original)
+        var d = Deserializer(data: s.toBytes())
+        let decoded = try d.deserializeI256()
+        #expect(decoded == original)
+    }
+
+    @Test("i256 roundtrip max value")
+    func i256RoundtripMax() throws {
+        let maxI256 = (BigInt(1) << 255) - 1
+        var s = Serializer()
+        try s.serializeI256(maxI256)
+        var d = Deserializer(data: s.toBytes())
+        let decoded = try d.deserializeI256()
+        #expect(decoded == maxI256)
+    }
+
+    @Test("i256 roundtrip min value")
+    func i256RoundtripMin() throws {
+        let minI256 = -(BigInt(1) << 255)
+        var s = Serializer()
+        try s.serializeI256(minI256)
+        var d = Deserializer(data: s.toBytes())
+        let decoded = try d.deserializeI256()
+        #expect(decoded == minI256)
     }
 }

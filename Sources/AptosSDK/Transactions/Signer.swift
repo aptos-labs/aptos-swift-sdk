@@ -39,6 +39,8 @@ public enum TransactionSigner {
             switch senderAuthenticator {
             case let .ed25519(pubKey, sig):
                 .ed25519(publicKey: pubKey, signature: sig)
+            case let .multiEd25519(pubKey, sig):
+                .multiEd25519(publicKey: pubKey, signature: sig)
             default:
                 .singleSender(senderAuthenticator)
             }

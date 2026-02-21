@@ -57,26 +57,84 @@ struct MultiSigVectorTests {
 
     // MARK: - Invalid Cases
 
-    @Test("Threshold zero is invalid")
+    @Test("Threshold zero throws typed MultiSignatureError")
     func thresholdZero() throws {
         let key = try Ed25519PrivateKey.generate().publicKey()
-        #expect(throws: (any Error).self) {
+        do {
             _ = try MultiEd25519PublicKey(publicKeys: [key, key, key], threshold: 0)
+            Issue.record("Expected error")
+        } catch let AptosError.multiSignature(e) {
+            if case .invalidThreshold = e {
+                // Expected
+            } else {
+                Issue.record("Expected invalidThreshold, got \(e)")
+            }
         }
     }
 
-    @Test("Threshold exceeds key count is invalid")
+    @Test("Threshold exceeds key count throws typed MultiSignatureError")
     func thresholdExceedsKeys() throws {
         let key = try Ed25519PrivateKey.generate().publicKey()
-        #expect(throws: (any Error).self) {
+        do {
             _ = try MultiEd25519PublicKey(publicKeys: [key, key, key], threshold: 4)
+            Issue.record("Expected error")
+        } catch let AptosError.multiSignature(e) {
+            if case .invalidThreshold = e {
+                // Expected
+            } else {
+                Issue.record("Expected invalidThreshold, got \(e)")
+            }
         }
     }
 
-    @Test("No keys is invalid")
+    @Test("No keys throws typed MultiSignatureError")
     func noKeys() {
-        #expect(throws: (any Error).self) {
+        do {
             _ = try MultiEd25519PublicKey(publicKeys: [], threshold: 1)
+            Issue.record("Expected error")
+        } catch let AptosError.multiSignature(e) {
+            if case .invalidThreshold = e {
+                // Expected
+            } else {
+                Issue.record("Expected invalidThreshold, got \(e)")
+            }
+        } catch {
+            Issue.record("Expected multiSignature error, got \(error)")
+        }
+    }
+
+    @Test("Too many keys throws tooManyKeys")
+    func tooManyKeys() throws {
+        var keys = [Ed25519PublicKey]()
+        for _ in 0 ..< 33 {
+            keys.append(try Ed25519PrivateKey.generate().publicKey())
+        }
+        do {
+            _ = try MultiEd25519PublicKey(publicKeys: keys, threshold: 2)
+            Issue.record("Expected error")
+        } catch let AptosError.multiSignature(e) {
+            if case let .tooManyKeys(count, maximum) = e {
+                #expect(count == 33)
+                #expect(maximum == 32)
+            } else {
+                Issue.record("Expected tooManyKeys, got \(e)")
+            }
+        }
+    }
+
+    @Test("MultiKey empty keys throws typed MultiSignatureError")
+    func multiKeyNoKeys() {
+        do {
+            _ = try MultiKey(publicKeys: [], signaturesRequired: 1)
+            Issue.record("Expected error")
+        } catch let AptosError.multiSignature(e) {
+            if case .invalidThreshold = e {
+                // Expected
+            } else {
+                Issue.record("Expected invalidThreshold, got \(e)")
+            }
+        } catch {
+            Issue.record("Expected multiSignature error, got \(error)")
         }
     }
 

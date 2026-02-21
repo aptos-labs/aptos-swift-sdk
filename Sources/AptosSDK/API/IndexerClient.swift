@@ -45,6 +45,33 @@ public struct IndexerClient: Sendable {
         return try await query(gql, variables: ["address": AnyCodable(address.toHex())])
     }
 
+    /// Gets fungible asset balances for an account.
+    public func getFungibleAssetBalances(
+        _ address: AccountAddress,
+        limit: Int = 100
+    ) async throws -> GraphQLResponse {
+        let gql = """
+        query GetFungibleAssetBalances($address: String!, $limit: Int!) {
+            current_fungible_asset_balances(
+                where: { owner_address: { _eq: $address } }
+                limit: $limit
+            ) {
+                asset_type
+                amount
+                metadata {
+                    name
+                    symbol
+                    decimals
+                }
+            }
+        }
+        """
+        return try await query(gql, variables: [
+            "address": AnyCodable(address.toHex()),
+            "limit": AnyCodable(limit),
+        ])
+    }
+
     /// Gets account transactions from the indexer.
     public func getAccountTransactions(
         _ address: AccountAddress,

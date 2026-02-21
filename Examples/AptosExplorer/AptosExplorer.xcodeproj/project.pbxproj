@@ -1,0 +1,434 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B20000010000000000000001 /* AptosExplorerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000001; };
+		B20000010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000002; };
+		B20000010000000000000003 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000003; };
+		B20000010000000000000004 /* LedgerInfoViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000004; };
+		B20000010000000000000005 /* AccountInspectorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000005; };
+		B20000010000000000000006 /* TransactionLookupViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000006; };
+		B20000010000000000000007 /* BlockExplorerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000007; };
+		B20000010000000000000008 /* ViewFunctionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000008; };
+		B20000010000000000000009 /* NetworkSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000009; };
+		B2000001000000000000000A /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002000000000000000A; };
+		B2000001000000000000000B /* LedgerInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002000000000000000B; };
+		B2000001000000000000000C /* AccountInspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002000000000000000C; };
+		B2000001000000000000000D /* TransactionLookupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002000000000000000D; };
+		B2000001000000000000000E /* TransactionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002000000000000000E; };
+		B2000001000000000000000F /* BlockExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002000000000000000F; };
+		B20000010000000000000010 /* ViewFunctionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000010; };
+		B20000010000000000000011 /* NetworkSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000011; };
+		B20000010000000000000012 /* JSONTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000012; };
+		B20000010000000000000013 /* KeyValueRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000013; };
+		B20000010000000000000014 /* CopyableText.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000014; };
+		B20000010000000000000015 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000015; };
+		B20000010000000000000016 /* LoadingStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000016; };
+		B20000010000000000000017 /* SidebarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000017; };
+		B20000010000000000000018 /* ViewFunctionPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000018; };
+		B20000010000000000000019 /* FormatUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000020000000000000019; };
+		B2000001000000000000001A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B2000002000000000000001A; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B20000020000000000000001 /* AptosExplorerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AptosExplorerApp.swift; sourceTree = "<group>"; };
+		B20000020000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		B20000020000000000000003 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		B20000020000000000000004 /* LedgerInfoViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerInfoViewModel.swift; sourceTree = "<group>"; };
+		B20000020000000000000005 /* AccountInspectorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountInspectorViewModel.swift; sourceTree = "<group>"; };
+		B20000020000000000000006 /* TransactionLookupViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionLookupViewModel.swift; sourceTree = "<group>"; };
+		B20000020000000000000007 /* BlockExplorerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockExplorerViewModel.swift; sourceTree = "<group>"; };
+		B20000020000000000000008 /* ViewFunctionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewFunctionViewModel.swift; sourceTree = "<group>"; };
+		B20000020000000000000009 /* NetworkSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkSettingsViewModel.swift; sourceTree = "<group>"; };
+		B2000002000000000000000A /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		B2000002000000000000000B /* LedgerInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerInfoView.swift; sourceTree = "<group>"; };
+		B2000002000000000000000C /* AccountInspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountInspectorView.swift; sourceTree = "<group>"; };
+		B2000002000000000000000D /* TransactionLookupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionLookupView.swift; sourceTree = "<group>"; };
+		B2000002000000000000000E /* TransactionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionDetailView.swift; sourceTree = "<group>"; };
+		B2000002000000000000000F /* BlockExplorerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockExplorerView.swift; sourceTree = "<group>"; };
+		B20000020000000000000010 /* ViewFunctionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewFunctionView.swift; sourceTree = "<group>"; };
+		B20000020000000000000011 /* NetworkSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkSettingsView.swift; sourceTree = "<group>"; };
+		B20000020000000000000012 /* JSONTreeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONTreeView.swift; sourceTree = "<group>"; };
+		B20000020000000000000013 /* KeyValueRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyValueRow.swift; sourceTree = "<group>"; };
+		B20000020000000000000014 /* CopyableText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopyableText.swift; sourceTree = "<group>"; };
+		B20000020000000000000015 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
+		B20000020000000000000016 /* LoadingStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingStateView.swift; sourceTree = "<group>"; };
+		B20000020000000000000017 /* SidebarItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarItem.swift; sourceTree = "<group>"; };
+		B20000020000000000000018 /* ViewFunctionPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewFunctionPreset.swift; sourceTree = "<group>"; };
+		B20000020000000000000019 /* FormatUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatUtils.swift; sourceTree = "<group>"; };
+		B2000002000000000000001A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B20000030000000000000001 /* AptosExplorer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AptosExplorer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B20000040000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		B20000050000000000000001 /* Root */ = {
+			isa = PBXGroup;
+			children = (
+				B20000050000000000000002 /* AptosExplorer */,
+				B2000005000000000000000A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B20000050000000000000002 /* AptosExplorer */ = {
+			isa = PBXGroup;
+			children = (
+				B20000020000000000000001 /* AptosExplorerApp.swift */,
+				B20000020000000000000002 /* ContentView.swift */,
+				B20000050000000000000003 /* ViewModels */,
+				B20000050000000000000004 /* Views */,
+				B20000050000000000000007 /* Models */,
+				B20000050000000000000008 /* Utilities */,
+				B2000002000000000000001A /* Assets.xcassets */,
+			);
+			path = AptosExplorer;
+			sourceTree = "<group>";
+		};
+		B20000050000000000000003 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				B20000020000000000000003 /* AppState.swift */,
+				B20000020000000000000004 /* LedgerInfoViewModel.swift */,
+				B20000020000000000000005 /* AccountInspectorViewModel.swift */,
+				B20000020000000000000006 /* TransactionLookupViewModel.swift */,
+				B20000020000000000000007 /* BlockExplorerViewModel.swift */,
+				B20000020000000000000008 /* ViewFunctionViewModel.swift */,
+				B20000020000000000000009 /* NetworkSettingsViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		B20000050000000000000004 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				B2000002000000000000000A /* SidebarView.swift */,
+				B2000002000000000000000B /* LedgerInfoView.swift */,
+				B2000002000000000000000C /* AccountInspectorView.swift */,
+				B2000002000000000000000D /* TransactionLookupView.swift */,
+				B2000002000000000000000E /* TransactionDetailView.swift */,
+				B2000002000000000000000F /* BlockExplorerView.swift */,
+				B20000020000000000000010 /* ViewFunctionView.swift */,
+				B20000020000000000000011 /* NetworkSettingsView.swift */,
+				B20000050000000000000005 /* Components */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		B20000050000000000000005 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				B20000020000000000000012 /* JSONTreeView.swift */,
+				B20000020000000000000013 /* KeyValueRow.swift */,
+				B20000020000000000000014 /* CopyableText.swift */,
+				B20000020000000000000015 /* StatusBadge.swift */,
+				B20000020000000000000016 /* LoadingStateView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		B20000050000000000000007 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				B20000020000000000000017 /* SidebarItem.swift */,
+				B20000020000000000000018 /* ViewFunctionPreset.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		B20000050000000000000008 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				B20000020000000000000019 /* FormatUtils.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		B2000005000000000000000A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B20000030000000000000001 /* AptosExplorer.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B20000060000000000000001 /* AptosExplorer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B20000080000000000000003 /* Build configuration list for PBXNativeTarget "AptosExplorer" */;
+			buildPhases = (
+				B20000070000000000000001 /* Sources */,
+				B20000040000000000000001 /* Frameworks */,
+				B20000070000000000000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AptosExplorer;
+			packageProductDependencies = (
+				B2000009000000000000000A /* AptosSDK */,
+			);
+			productName = AptosExplorer;
+			productReference = B20000030000000000000001 /* AptosExplorer.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B20000080000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					B20000060000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = B20000080000000000000002 /* Build configuration list for PBXProject "AptosExplorer" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = B20000050000000000000001;
+			packageReferences = (
+				B20000090000000000000001 /* XCLocalSwiftPackageReference "../../" */,
+			);
+			productRefGroup = B2000005000000000000000A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B20000060000000000000001 /* AptosExplorer */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B20000070000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2000001000000000000001A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B20000070000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B20000010000000000000001 /* AptosExplorerApp.swift in Sources */,
+				B20000010000000000000002 /* ContentView.swift in Sources */,
+				B20000010000000000000003 /* AppState.swift in Sources */,
+				B20000010000000000000004 /* LedgerInfoViewModel.swift in Sources */,
+				B20000010000000000000005 /* AccountInspectorViewModel.swift in Sources */,
+				B20000010000000000000006 /* TransactionLookupViewModel.swift in Sources */,
+				B20000010000000000000007 /* BlockExplorerViewModel.swift in Sources */,
+				B20000010000000000000008 /* ViewFunctionViewModel.swift in Sources */,
+				B20000010000000000000009 /* NetworkSettingsViewModel.swift in Sources */,
+				B2000001000000000000000A /* SidebarView.swift in Sources */,
+				B2000001000000000000000B /* LedgerInfoView.swift in Sources */,
+				B2000001000000000000000C /* AccountInspectorView.swift in Sources */,
+				B2000001000000000000000D /* TransactionLookupView.swift in Sources */,
+				B2000001000000000000000E /* TransactionDetailView.swift in Sources */,
+				B2000001000000000000000F /* BlockExplorerView.swift in Sources */,
+				B20000010000000000000010 /* ViewFunctionView.swift in Sources */,
+				B20000010000000000000011 /* NetworkSettingsView.swift in Sources */,
+				B20000010000000000000012 /* JSONTreeView.swift in Sources */,
+				B20000010000000000000013 /* KeyValueRow.swift in Sources */,
+				B20000010000000000000014 /* CopyableText.swift in Sources */,
+				B20000010000000000000015 /* StatusBadge.swift in Sources */,
+				B20000010000000000000016 /* LoadingStateView.swift in Sources */,
+				B20000010000000000000017 /* SidebarItem.swift in Sources */,
+				B20000010000000000000018 /* ViewFunctionPreset.swift in Sources */,
+				B20000010000000000000019 /* FormatUtils.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		B2000008000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+			};
+			name = Debug;
+		};
+		B2000008000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+				VALIDATE_PRODUCT = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+			};
+			name = Release;
+		};
+		B2000008000000000000000C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.AptosExplorer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRICT_CONCURRENCY = complete;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SUPPORTS_MACCATALYST = NO;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+			};
+			name = Debug;
+		};
+		B2000008000000000000000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.AptosExplorer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRICT_CONCURRENCY = complete;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				SUPPORTS_MACCATALYST = NO;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		B20000080000000000000002 /* Build configuration list for PBXProject "AptosExplorer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B2000008000000000000000A /* Debug */,
+				B2000008000000000000000B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B20000080000000000000003 /* Build configuration list for PBXNativeTarget "AptosExplorer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B2000008000000000000000C /* Debug */,
+				B2000008000000000000000D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		B20000090000000000000001 /* XCLocalSwiftPackageReference "../../" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../../";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B2000009000000000000000A /* AptosSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AptosSDK;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = B20000080000000000000001 /* Project object */;
+}

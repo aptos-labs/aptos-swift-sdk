@@ -6,6 +6,11 @@ Package.resolved
 # Xcode
 *.xcodeproj/
 *.xcworkspace/
+
+# Allow Example app projects
+!Examples/
+!Examples/**/*.xcodeproj
+!Examples/**/*.xcodeproj/**
 xcuserdata/
 DerivedData/
 *.pbxuser

@@ -218,7 +218,7 @@ public struct RetryConfig: Sendable {
         maxRetries: Int = 3,
         initialBackoffMs: UInt64 = 200,
         backoffMultiplier: Double = 2.0,
-        maxDelayMs: UInt64 = 5_000
+        maxDelayMs: UInt64 = 5000
     ) {
         self.maxRetries = maxRetries
         self.initialBackoffMs = initialBackoffMs

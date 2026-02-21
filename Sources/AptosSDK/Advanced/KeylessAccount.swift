@@ -233,7 +233,7 @@ extension KeylessAccount: AptosAccount {
     }
 
     public func authenticationKey() throws -> AuthenticationKey {
-        return try AuthenticationKey.fromKeyless(
+        try AuthenticationKey.fromKeyless(
             issuer: keylessPublicKey.issuer,
             audience: audience,
             uidKey: uidKey,

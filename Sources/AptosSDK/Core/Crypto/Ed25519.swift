@@ -60,8 +60,7 @@ extension Ed25519PublicKey: BCSSerializable, BCSDeserializable {
 /// Conforms to `CustomStringConvertible` and `CustomDebugStringConvertible`
 /// with redacted output to prevent accidental logging of key material.
 public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
-    CustomDebugStringConvertible
-{
+    CustomDebugStringConvertible {
     public private(set) var data: Data
 
     public static let length = 32
@@ -160,8 +159,13 @@ public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
         data = Data(repeating: 0, count: count)
     }
 
-    public var description: String { "Ed25519PrivateKey(<REDACTED>)" }
-    public var debugDescription: String { "Ed25519PrivateKey(<REDACTED>)" }
+    public var description: String {
+        "Ed25519PrivateKey(<REDACTED>)"
+    }
+
+    public var debugDescription: String {
+        "Ed25519PrivateKey(<REDACTED>)"
+    }
 
     /// Internal init that skips validation (for generate).
     private init(unchecked data: Data) {

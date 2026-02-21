@@ -80,8 +80,7 @@ extension Secp256k1PublicKey: BCSSerializable, BCSDeserializable {
 /// Conforms to `CustomStringConvertible` and `CustomDebugStringConvertible`
 /// with redacted output to prevent accidental logging of key material.
 public struct Secp256k1PrivateKey: Sendable, Equatable, CustomStringConvertible,
-    CustomDebugStringConvertible
-{
+    CustomDebugStringConvertible {
     public private(set) var data: Data
 
     public static let length = 32
@@ -95,7 +94,9 @@ public struct Secp256k1PrivateKey: Sendable, Equatable, CustomStringConvertible,
         // Fallback path: sample random 32-byte candidates until one is a valid scalar.
         var rng = SystemRandomNumberGenerator()
         while true {
-            let candidate = Data((0 ..< Self.length).map { _ in UInt8.random(in: UInt8.min ... UInt8.max, using: &rng) })
+            let candidate = Data((0 ..< Self.length).map { _ in
+                UInt8.random(in: UInt8.min ... UInt8.max, using: &rng)
+            })
             if (try? P256K.Signing.PrivateKey(dataRepresentation: candidate)) != nil {
                 return Self(unchecked: candidate)
             }
@@ -157,8 +158,13 @@ public struct Secp256k1PrivateKey: Sendable, Equatable, CustomStringConvertible,
         data = Data(repeating: 0, count: count)
     }
 
-    public var description: String { "Secp256k1PrivateKey(<REDACTED>)" }
-    public var debugDescription: String { "Secp256k1PrivateKey(<REDACTED>)" }
+    public var description: String {
+        "Secp256k1PrivateKey(<REDACTED>)"
+    }
+
+    public var debugDescription: String {
+        "Secp256k1PrivateKey(<REDACTED>)"
+    }
 
     private init(unchecked data: Data) {
         self.data = data

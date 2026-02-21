@@ -11,11 +11,11 @@ public enum AptosConstants {
     /// Default gas unit price.
     public static let defaultGasUnitPrice: UInt64 = 100
 
-    /// Default transaction expiry in seconds from now.
-    public static let defaultTxnExpirySecs: UInt64 = 20
+    /// Default transaction expiry in seconds from now (spec: 600s).
+    public static let defaultTxnExpirySecs: UInt64 = 600
 
-    /// Default timeout for waiting for transaction confirmation (seconds).
-    public static let defaultTxnTimeoutSecs: UInt64 = 20
+    /// Default timeout for waiting for transaction confirmation (spec: 30s).
+    public static let defaultTxnTimeoutSecs: UInt64 = 30
 
     /// Polling interval for transaction wait (milliseconds).
     public static let waitForTxnPollIntervalMs: UInt64 = 200

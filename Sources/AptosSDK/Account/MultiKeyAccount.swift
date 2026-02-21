@@ -54,6 +54,10 @@ extension MultiKeyAccount: AptosAccount {
         .multiKey
     }
 
+    public var publicKeyBytes: Data {
+        (try? bcsToBytes(multiKey)) ?? Data()
+    }
+
     public func sign(message: Data) throws -> AnySignature {
         // MultiKey returns multiple signatures, so we wrap in the first one
         // This shouldn't normally be called directly

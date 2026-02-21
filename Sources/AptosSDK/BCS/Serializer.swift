@@ -11,6 +11,9 @@ public struct Serializer: ~Copyable, Sendable {
     /// The internal buffer for serialized data.
     private var buffer: Data
 
+    /// Current nesting depth for recursive types.
+    private var depth = 0
+
     /// Maximum serializable byte array length (10 MB).
     public static let maxLength = 10 * 1024 * 1024
 
@@ -23,6 +26,19 @@ public struct Serializer: ~Copyable, Sendable {
     /// Creates a new serializer with the specified initial capacity.
     public init(capacity: Int = 64) {
         buffer = Data(capacity: capacity)
+    }
+
+    private mutating func incrementDepth() throws {
+        depth += 1
+        guard depth <= Self.maxDepth else {
+            throw AptosError.serialization(.depthLimitExceeded(
+                "Serialization depth \(depth) exceeds max \(Self.maxDepth)"
+            ))
+        }
+    }
+
+    private mutating func decrementDepth() {
+        depth -= 1
     }
 
     /// Returns the serialized bytes.
@@ -99,6 +115,23 @@ public struct Serializer: ~Copyable, Sendable {
         withUnsafeBytes(of: value.littleEndian) { buffer.append(contentsOf: $0) }
     }
 
+    /// Serializes a signed Int128 value (as BigInt) as 16 bytes in two's complement little-endian.
+    public mutating func serializeI128(_ value: BigInt) throws {
+        let minI128 = -(BigInt(1) << 127)
+        let maxI128 = (BigInt(1) << 127) - 1
+        guard value >= minI128, value <= maxI128 else {
+            throw AptosError.serialization(.outOfRange("Value \(value) exceeds I128 range"))
+        }
+        // Convert to two's complement: negative values become value + 2^128
+        let unsigned = if value < 0 {
+            BigUInt(value + (BigInt(1) << 128))
+        } else {
+            BigUInt(value)
+        }
+        let data = unsigned.littleEndianData(count: 16)
+        buffer.append(data)
+    }
+
     // MARK: - Bytes and Strings
 
     /// Serializes a string as ULEB128 length prefix + UTF-8 bytes.
@@ -140,6 +173,8 @@ public struct Serializer: ~Copyable, Sendable {
 
     /// Serializes an optional value: 0x00 for nil, 0x01 + serialized value for some.
     public mutating func serializeOption(_ value: (some BCSSerializable)?) throws {
+        try incrementDepth()
+        defer { decrementDepth() }
         if let value {
             serializeBool(true)
             try value.serialize(to: &self)
@@ -150,6 +185,8 @@ public struct Serializer: ~Copyable, Sendable {
 
     /// Serializes a vector (array) as ULEB128 count + serialized elements.
     public mutating func serializeVector(_ values: [some BCSSerializable]) throws {
+        try incrementDepth()
+        defer { decrementDepth() }
         try serializeU32AsUleb128(UInt32(values.count))
         for value in values {
             try value.serialize(to: &self)

@@ -14,6 +14,9 @@ public struct Deserializer: ~Copyable, Sendable {
     /// Current read offset.
     private var offset: Int
 
+    /// Current nesting depth for recursive types.
+    private var depth = 0
+
     /// Maximum deserializable byte array length (10 MB).
     public static let maxLength = 10 * 1024 * 1024
 
@@ -30,6 +33,19 @@ public struct Deserializer: ~Copyable, Sendable {
     public init(bytes: [UInt8]) {
         data = Data(bytes)
         offset = 0
+    }
+
+    private mutating func incrementDepth() throws {
+        depth += 1
+        guard depth <= Self.maxDepth else {
+            throw AptosError.serialization(.depthLimitExceeded(
+                "Deserialization depth \(depth) exceeds max \(Self.maxDepth)"
+            ))
+        }
+    }
+
+    private mutating func decrementDepth() {
+        depth -= 1
     }
 
     /// Returns the number of remaining bytes.
@@ -117,6 +133,18 @@ public struct Deserializer: ~Copyable, Sendable {
         return bytes.withUnsafeBytes { $0.loadUnaligned(as: Int64.self) }.littleEndian
     }
 
+    /// Deserializes a signed Int128 from 16 bytes in two's complement little-endian order.
+    public mutating func deserializeI128() throws -> BigInt {
+        let bytes = try readBytes(count: 16)
+        let unsigned = BigUInt.fromLittleEndianBytes(bytes)
+        let maxPositive = (BigUInt(1) << 127) - 1
+        if unsigned > maxPositive {
+            // Negative value: subtract 2^128
+            return BigInt(unsigned) - (BigInt(1) << 128)
+        }
+        return BigInt(unsigned)
+    }
+
     // MARK: - Bytes and Strings
 
     /// Deserializes a UTF-8 string (ULEB128 length prefix + bytes).
@@ -156,6 +184,11 @@ public struct Deserializer: ~Copyable, Sendable {
             value |= UInt64(byte & 0x7F) << shift
 
             if byte & 0x80 == 0 {
+                if byte == 0, shift > 0 {
+                    throw AptosError.serialization(.invalidData(
+                        "Non-canonical ULEB128: trailing zero byte"
+                    ))
+                }
                 guard value <= UInt64(UInt32.max) else {
                     throw AptosError.serialization(.outOfRange(
                         "ULEB128 value \(value) exceeds UInt32.max"
@@ -173,6 +206,8 @@ public struct Deserializer: ~Copyable, Sendable {
 
     /// Deserializes an optional value.
     public mutating func deserializeOption<T: BCSDeserializable>(_: T.Type) throws -> T? {
+        try incrementDepth()
+        defer { decrementDepth() }
         let hasValue = try deserializeBool()
         if hasValue {
             return try T.deserialize(from: &self)
@@ -182,6 +217,8 @@ public struct Deserializer: ~Copyable, Sendable {
 
     /// Deserializes a vector (array) of deserializable values.
     public mutating func deserializeVector<T: BCSDeserializable>(_: T.Type) throws -> [T] {
+        try incrementDepth()
+        defer { decrementDepth() }
         let count = Int(try deserializeUleb128())
         var result = [T]()
         result.reserveCapacity(count)

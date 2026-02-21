@@ -81,6 +81,7 @@ public struct ChainId: Sendable, Equatable, Hashable {
 
     public static let mainnet = Self(1)
     public static let testnet = Self(2)
+    public static let devnet = Self(3)
     public static let local = Self(4)
 }
 

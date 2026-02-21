@@ -8,6 +8,9 @@ public protocol AptosAccount: Sendable {
     /// The signing scheme used by this account.
     var signingScheme: SigningScheme { get }
 
+    /// The raw public key bytes for this account.
+    var publicKeyBytes: Data { get }
+
     /// Signs a raw message.
     func sign(message: Data) throws -> AnySignature
 

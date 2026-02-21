@@ -37,6 +37,9 @@ public struct AptosConfig: Sendable {
     /// Transaction generation defaults.
     public let transactionConfig: TransactionGenerationConfig
 
+    /// Retry configuration for HTTP requests.
+    public let retryConfig: RetryConfig
+
     /// Creates a new configuration.
     public init(
         network: Network = .devnet,
@@ -49,7 +52,8 @@ public struct AptosConfig: Sendable {
         fullnodeHeaders: [String: String] = [:],
         indexerHeaders: [String: String] = [:],
         faucetConfig: FaucetConfig = FaucetConfig(),
-        transactionConfig: TransactionGenerationConfig = TransactionGenerationConfig()
+        transactionConfig: TransactionGenerationConfig = TransactionGenerationConfig(),
+        retryConfig: RetryConfig = RetryConfig()
     ) {
         self.network = network
         self.fullnodeURL = fullnodeURL
@@ -62,6 +66,7 @@ public struct AptosConfig: Sendable {
         self.indexerHeaders = indexerHeaders
         self.faucetConfig = faucetConfig
         self.transactionConfig = transactionConfig
+        self.retryConfig = retryConfig
     }
 
     // MARK: - Convenience Initializers
@@ -190,5 +195,29 @@ public struct TransactionGenerationConfig: Sendable {
     ) {
         self.defaultMaxGasAmount = defaultMaxGasAmount
         self.defaultTxnExpirySecs = defaultTxnExpirySecs
+    }
+}
+
+// MARK: - RetryConfig
+
+/// Configuration for HTTP request retry behavior.
+public struct RetryConfig: Sendable {
+    /// Maximum number of retry attempts.
+    public var maxRetries: Int
+
+    /// Initial backoff delay in milliseconds.
+    public var initialBackoffMs: UInt64
+
+    /// Multiplier applied to backoff after each retry.
+    public var backoffMultiplier: Double
+
+    public init(
+        maxRetries: Int = 3,
+        initialBackoffMs: UInt64 = 200,
+        backoffMultiplier: Double = 2.0
+    ) {
+        self.maxRetries = maxRetries
+        self.initialBackoffMs = initialBackoffMs
+        self.backoffMultiplier = backoffMultiplier
     }
 }

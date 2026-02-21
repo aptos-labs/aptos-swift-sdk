@@ -41,7 +41,7 @@ public actor AptosHTTPClient {
             url: url, path: path, method: "GET",
             params: params, apiType: apiType
         )
-        return try await execute(request)
+        return try await executeWithRetry(request)
     }
 
     /// Performs a POST request with a JSON body and decodes the response.
@@ -57,7 +57,7 @@ public actor AptosHTTPClient {
         )
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)
-        return try await execute(request)
+        return try await executeWithRetry(request)
     }
 
     /// Performs a POST request with raw BCS bytes.
@@ -74,7 +74,7 @@ public actor AptosHTTPClient {
         )
         request.setValue(contentType, forHTTPHeaderField: "Content-Type")
         request.httpBody = body
-        return try await execute(request)
+        return try await executeWithRetry(request)
     }
 
     /// Performs a POST request with raw BCS bytes, returning raw Data.
@@ -90,9 +90,7 @@ public actor AptosHTTPClient {
         )
         request.setValue(contentType, forHTTPHeaderField: "Content-Type")
         request.httpBody = body
-        let (data, response) = try await session.data(for: request)
-        try validateResponse(response, data: data)
-        return data
+        return try await executeRawWithRetry(request)
     }
 
     // MARK: - Internal
@@ -162,19 +160,78 @@ public actor AptosHTTPClient {
         return request
     }
 
-    private func execute<T: Decodable>(_ request: URLRequest) async throws -> T {
-        let (data, response) = try await session.data(for: request)
-        try validateResponse(response, data: data)
+    private func executeWithRetry<T: Decodable>(_ request: URLRequest) async throws -> T {
+        let retryConfig = config.retryConfig
+        var lastError: Error?
 
-        do {
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            return try decoder.decode(T.self, from: data)
-        } catch {
-            throw AptosError.api(.decodingError(
-                "Failed to decode \(T.self): \(error.localizedDescription)"
-            ))
+        for attempt in 0 ... retryConfig.maxRetries {
+            do {
+                let (data, response) = try await session.data(for: request)
+                try validateResponse(response, data: data)
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                return try decoder.decode(T.self, from: data)
+            } catch let error as AptosError {
+                lastError = error
+                if attempt < retryConfig.maxRetries, isRetryable(error: error) {
+                    let delay = retryDelay(
+                        attempt: attempt, config: retryConfig,
+                        retryAfter: retryAfterValue(error: error)
+                    )
+                    try await Task.sleep(nanoseconds: delay)
+                    continue
+                }
+                throw error
+            } catch {
+                lastError = error
+                if attempt < retryConfig.maxRetries, isNetworkError(error) {
+                    let delay = retryDelay(attempt: attempt, config: retryConfig)
+                    try await Task.sleep(nanoseconds: delay)
+                    continue
+                }
+                throw error
+            }
         }
+
+        throw AptosError.network(.retryExhausted(
+            "All \(retryConfig.maxRetries) retries exhausted. Last error: \(lastError?.localizedDescription ?? "unknown")"
+        ))
+    }
+
+    private func executeRawWithRetry(_ request: URLRequest) async throws -> Data {
+        let retryConfig = config.retryConfig
+        var lastError: Error?
+
+        for attempt in 0 ... retryConfig.maxRetries {
+            do {
+                let (data, response) = try await session.data(for: request)
+                try validateResponse(response, data: data)
+                return data
+            } catch let error as AptosError {
+                lastError = error
+                if attempt < retryConfig.maxRetries, isRetryable(error: error) {
+                    let delay = retryDelay(
+                        attempt: attempt, config: retryConfig,
+                        retryAfter: retryAfterValue(error: error)
+                    )
+                    try await Task.sleep(nanoseconds: delay)
+                    continue
+                }
+                throw error
+            } catch {
+                lastError = error
+                if attempt < retryConfig.maxRetries, isNetworkError(error) {
+                    let delay = retryDelay(attempt: attempt, config: retryConfig)
+                    try await Task.sleep(nanoseconds: delay)
+                    continue
+                }
+                throw error
+            }
+        }
+
+        throw AptosError.network(.retryExhausted(
+            "All \(retryConfig.maxRetries) retries exhausted. Last error: \(lastError?.localizedDescription ?? "unknown")"
+        ))
     }
 
     private func validateResponse(_ response: URLResponse, data: Data) throws {
@@ -184,7 +241,6 @@ public actor AptosHTTPClient {
 
         let statusCode = httpResponse.statusCode
         guard (200 ..< 300).contains(statusCode) else {
-            // Try to parse error body
             let message: String = if let errorBody = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
                 errorBody.message
             } else if let bodyStr = String(data: data, encoding: .utf8) {
@@ -192,8 +248,58 @@ public actor AptosHTTPClient {
             } else {
                 "HTTP \(statusCode)"
             }
-            throw AptosError.network(.httpError(statusCode: statusCode, message: message))
+
+            switch statusCode {
+            case 401:
+                throw AptosError.unauthorized(message)
+            case 429:
+                let retryAfter = httpResponse.value(forHTTPHeaderField: "Retry-After")
+                let detail = retryAfter.map { "\(message) (retry-after: \($0)s)" } ?? message
+                throw AptosError.rateLimited(detail)
+            case 500 ... 599:
+                throw AptosError.internalError(message)
+            default:
+                throw AptosError.network(.httpError(statusCode: statusCode, message: message))
+            }
         }
+    }
+
+    // MARK: - Retry Helpers
+
+    private func isRetryable(error: AptosError) -> Bool {
+        switch error {
+        case .rateLimited:
+            true
+        case .internalError:
+            true
+        case .network(.timeout), .network(.connectionFailed):
+            true
+        default:
+            false
+        }
+    }
+
+    private func isNetworkError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain
+    }
+
+    private func retryAfterValue(error: AptosError) -> UInt64? {
+        if case let .rateLimited(msg) = error,
+           let range = msg.range(of: "retry-after: "),
+           let endRange = msg[range.upperBound...].range(of: "s)") {
+            let seconds = msg[range.upperBound ..< endRange.lowerBound]
+            return UInt64(seconds).map { $0 * 1000 }
+        }
+        return nil
+    }
+
+    private func retryDelay(attempt: Int, config: RetryConfig, retryAfter: UInt64? = nil) -> UInt64 {
+        if let retryAfter {
+            return retryAfter * 1_000_000 // ms to ns
+        }
+        let delayMs = Double(config.initialBackoffMs) * pow(config.backoffMultiplier, Double(attempt))
+        return UInt64(delayMs) * 1_000_000 // ms to ns
     }
 }
 

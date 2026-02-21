@@ -13,6 +13,10 @@ public struct Ed25519Account: AptosAccount, Sendable {
 
     public let signingScheme = SigningScheme.ed25519
 
+    public var publicKeyBytes: Data {
+        publicKey.data
+    }
+
     /// Creates an account from an existing private key.
     public init(privateKey: Ed25519PrivateKey, address: AccountAddress? = nil) throws {
         self.privateKey = privateKey
@@ -35,6 +39,23 @@ public struct Ed25519Account: AptosAccount, Sendable {
     public static func fromPrivateKey(_ hex: String) throws -> Self {
         let key = try Ed25519PrivateKey.fromHex(hex)
         return try Self(privateKey: key)
+    }
+
+    /// Creates an Ed25519 account from a BIP-39 mnemonic phrase using SLIP-0010 derivation.
+    ///
+    /// - Parameters:
+    ///   - phrase: A valid BIP-39 mnemonic phrase.
+    ///   - path: The derivation path (default: m/44'/637'/0'/0'/0').
+    ///   - passphrase: Optional BIP-39 passphrase (default: empty string).
+    public static func fromMnemonic(
+        _ phrase: String,
+        path: String = DerivationPath.defaultAptos,
+        passphrase: String = ""
+    ) throws -> Self {
+        let seed = try Mnemonic.toSeed(phrase, passphrase: passphrase)
+        let (key, _) = try SLIP0010.derivePath(path, seed: seed)
+        let privateKey = try Ed25519PrivateKey(data: key)
+        return try Self(privateKey: privateKey)
     }
 
     // MARK: - AptosAccount

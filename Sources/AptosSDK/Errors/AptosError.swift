@@ -11,6 +11,9 @@ public enum AptosError: Error, Sendable, LocalizedError {
     case api(APIError)
     case transaction(TransactionError)
     case keyless(KeylessError)
+    case unauthorized(String)
+    case rateLimited(String)
+    case internalError(String)
     case invalidArgument(String)
     case invalidState(String)
     case notFound(String)
@@ -26,6 +29,9 @@ public enum AptosError: Error, Sendable, LocalizedError {
         case let .api(e): "API error: \(e.localizedDescription)"
         case let .transaction(e): "Transaction error: \(e.localizedDescription)"
         case let .keyless(e): "Keyless error: \(e.localizedDescription)"
+        case let .unauthorized(msg): "Unauthorized: \(msg)"
+        case let .rateLimited(msg): "Rate limited: \(msg)"
+        case let .internalError(msg): "Internal error: \(msg)"
         case let .invalidArgument(msg): "Invalid argument: \(msg)"
         case let .invalidState(msg): "Invalid state: \(msg)"
         case let .notFound(msg): "Not found: \(msg)"

@@ -21,6 +21,13 @@ public struct FaucetAPI: Sendable {
         let body = FaucetFundRequest(address: address.toHex(), amount: amount)
         return try await client.post(url: url, path: "fund", body: body, apiType: .faucet)
     }
+
+    /// Creates a new Ed25519 account and funds it with test tokens.
+    public func createAndFundAccount(amount: UInt64 = 100_000_000) async throws -> Ed25519Account {
+        let account = try Ed25519Account.generate()
+        _ = try await fundAccount(account.accountAddress, amount: amount)
+        return account
+    }
 }
 
 // MARK: - FaucetFundRequest

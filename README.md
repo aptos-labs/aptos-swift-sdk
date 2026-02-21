@@ -1,6 +1,6 @@
 # Aptos Swift SDK
 
-A comprehensive, type-safe Swift SDK for the [Aptos](https://aptoslabs.com) blockchain, targeting **Tier 3 (Full Compliance)** with the [aptos-sdk-specs](https://github.com/aptos-labs/aptos-sdk-specs) v1.0.0.
+A comprehensive, type-safe Swift SDK for the [Aptos](https://aptoslabs.com) blockchain, targeting **Tier 2 (P0 + P1 Compliance)** with the [aptos-sdk-specs](https://github.com/aptos-labs/aptos-sdk-specs) v1.0.0.
 
 ## Requirements
 
@@ -96,6 +96,32 @@ let multiAccount = try MultiKeyAccount(
     signerIndices: [0, 1]
 )
 ```
+
+### HD Wallet (BIP-39 / BIP-44)
+
+The SDK includes full mnemonic-based HD wallet support:
+
+```swift
+// Generate a new 12-word mnemonic
+let mnemonic = Mnemonic.generate(wordCount: .twelve)
+
+// Derive an Ed25519 account from a mnemonic (default Aptos path: m/44'/637'/0'/0'/0')
+let account = try Ed25519Account.fromMnemonic(mnemonic)
+
+// Derive with a custom path or passphrase
+let account1 = try Ed25519Account.fromMnemonic(mnemonic, path: "m/44'/637'/0'/0'/1'")
+let accountWithPass = try Ed25519Account.fromMnemonic(mnemonic, passphrase: "my-passphrase")
+
+// Validate a mnemonic phrase
+if Mnemonic.validate(mnemonic) {
+    print("Valid BIP-39 mnemonic")
+}
+
+// Derive a BIP-39 seed directly
+let seed = try Mnemonic.toSeed(mnemonic, passphrase: "")
+```
+
+Supported word counts: 12, 15, 18, 21, 24. Key derivation uses SLIP-0010 (Ed25519) and BIP-32 (Secp256k1) with PBKDF2-HMAC-SHA512 for seed generation (2048 iterations per BIP-39).
 
 ### Private Key Formats
 
@@ -219,18 +245,25 @@ let testnet = AptosClient(.testnet)
 let devnet  = AptosClient(.devnet)
 let local   = AptosClient(.localnet)
 
-// Custom configuration
+// Custom configuration with retry and timeout tuning
 let config = AptosConfig(
     network: .custom(name: "my-network", chainId: 42),
-    fullnodeUrl: "https://my-node.example.com/v1",
-    indexerUrl: "https://my-indexer.example.com/v1/graphql",
+    fullnodeURL: "https://my-node.example.com/v1",
+    indexerURL: "https://my-indexer.example.com/v1/graphql",
     clientConfig: ClientConfig(
         apiKey: "my-api-key",
         timeoutInterval: 30
+    ),
+    retryConfig: RetryConfig(
+        maxRetries: 5,
+        initialBackoffMs: 300,
+        backoffMultiplier: 2.0
     )
 )
 let client = AptosClient(config)
 ```
+
+The HTTP client automatically retries transient failures (HTTP 429, 5xx, network errors) with exponential backoff. Default: 3 retries starting at 200ms. The `Retry-After` header is respected on 429 responses.
 
 ## API Reference
 
@@ -263,14 +296,22 @@ AptosClient (unified entry point)
   ├── API Layer (15 domain APIs)
   ├── Transactions (builder, signer, authenticators)
   ├── Accounts (Ed25519, SingleKey, MultiKey, Keyless)
-  ├── Core/Crypto (keys, signatures, hashing)
-  ├── BCS (serializer, deserializer)
-  └── Networking (actor-based HTTP client)
+  ├── Core/Crypto (keys, signatures, hashing, mnemonic, HD derivation)
+  ├── BCS (serializer, deserializer, depth-tracked)
+  ├── Networking (actor-based HTTP client with retry)
+  └── CTweetNaCl (embedded C library for deterministic Ed25519)
 ```
 
 See [docs/swift-DESIGN.md](docs/swift-DESIGN.md) for the full design document.
 
 ## Development
+
+### Prerequisites
+
+```bash
+# Required
+brew install swiftformat swiftlint
+```
 
 ### Building
 
@@ -284,41 +325,56 @@ swift build
 swift test
 ```
 
+The test suite includes ~270 tests across 21 suites, including deterministic test vectors from the [aptos-sdk-specs](https://github.com/aptos-labs/aptos-sdk-specs) covering addresses, BCS, signatures, type tags, transactions, mnemonics, and multi-sig.
+
 ### Formatting
 
-The project uses [SwiftFormat](https://github.com/nicklockwood/SwiftFormat) for consistent code style:
+The project uses [SwiftFormat](https://github.com/nicklockwood/SwiftFormat) for consistent code style. Configuration is in `.swiftformat`.
 
 ```bash
-# Install
-brew install swiftformat
-
 # Format all source files
-swiftformat Sources/ Tests/
+make format
 
 # Check without modifying (CI mode)
-swiftformat --lint Sources/ Tests/
+make format-check
 ```
+
+Key formatting rules:
+- 4-space indentation (no tabs)
+- 120-character line length maximum
+- Sorted imports with `@testable` at the bottom
+- Trailing commas in multi-line collections
+- Remove redundant `self`, `return`, `init`, `Void`
+- K&R brace style (`} else {` on same line)
+- `guard else` on next line
 
 ### Linting
 
-The project uses [SwiftLint](https://github.com/realm/SwiftLint) for static analysis:
+The project uses [SwiftLint](https://github.com/realm/SwiftLint) for static analysis. Configuration is in `.swiftlint.yml`.
 
 ```bash
-# Install
-brew install swiftlint
+# Lint all source and test files
+make lint
 
-# Lint
-swiftlint lint Sources/ Tests/
-
-# Auto-fix
-swiftlint lint --fix Sources/ Tests/
+# Auto-fix what can be fixed
+make lint-fix
 ```
+
+Key lint rules enforced:
+- `force_unwrapping` — no `!` force unwraps
+- `cyclomatic_complexity` — max 15 (warning), 25 (error)
+- `function_body_length` — max 60 lines (warning), 100 (error)
+- `identifier_name` — minimum 2 characters (with exceptions for loop vars)
+- `line_length` — 120 warning, 200 error
+- 50+ opt-in rules for code quality (see `.swiftlint.yml`)
 
 ### All Checks (CI)
 
 ```bash
 make ci
 ```
+
+This runs build, test, format-check, and lint in sequence. The same checks run in GitHub Actions on every push and PR to `main`.
 
 Or run individually:
 
@@ -346,6 +402,12 @@ do {
         print("Not found: \(msg)")
     case .transaction(.waitTimeout(let hash)):
         print("Transaction \(hash) timed out")
+    case .unauthorized(let msg):
+        print("Auth failed: \(msg)")       // HTTP 401
+    case .rateLimited(let msg):
+        print("Rate limited: \(msg)")       // HTTP 429
+    case .internalError(let msg):
+        print("Server error: \(msg)")       // HTTP 5xx
     default:
         print("Error: \(error.localizedDescription)")
     }
@@ -374,13 +436,28 @@ let (b, i) = try await (balance, info)
 - **Use AIP-80 format** for key serialization — it includes the scheme prefix for unambiguous parsing.
 - **Validate addresses** using `AccountAddress.fromHex()` which checks length and format.
 - **HTTPS only** — all default API endpoints use HTTPS.
+- **Deterministic signing** — Ed25519 signatures use a deterministic nonce (RFC 8032) via the embedded CTweetNaCl library, ensuring reproducible signatures across platforms.
+- **BCS depth limits** — serialization/deserialization enforce a max nesting depth of 128 to prevent stack overflow from malicious inputs.
+- **Non-canonical ULEB128 rejection** — the BCS deserializer rejects non-canonical ULEB128 encodings (e.g., `0x80 0x00` for the value 0), preventing ambiguity attacks.
 
 ### Performance
 
-- **CryptoKit hardware acceleration** — Ed25519 and P-256 operations use Apple's Secure Enclave coprocessor on supported hardware.
-- **Value types** — Most SDK types are structs (stack-allocated, no heap overhead).
+- **Deterministic Ed25519 via CTweetNaCl** — embedded C implementation provides RFC 8032 deterministic signing while CryptoKit handles verification with hardware acceleration.
+- **Value types** — most SDK types are structs (stack-allocated, no heap overhead).
 - **Copy-on-write `Data`** — BCS buffers use Swift's COW `Data` type for zero-cost copies.
-- **Actor-based networking** — Connection pooling via URLSession, HTTP/2 multiplexing.
+- **Actor-based networking** — connection pooling via URLSession, HTTP/2 multiplexing.
+- **Exponential backoff retry** — transient failures are retried automatically without wasting resources.
+- **PBKDF2 via CommonCrypto** — mnemonic seed derivation uses Apple's optimized C implementation.
+
+## Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| [secp256k1.swift](https://github.com/nicklockwood/secp256k1.swift) (P256K) | Secp256k1 ECDSA signing |
+| [BigInt](https://github.com/attaswift/BigInt) | U128/U256/I128 arithmetic for BCS |
+| CTweetNaCl (embedded) | Deterministic Ed25519 signing (RFC 8032) |
+
+Apple frameworks used: `CryptoKit` (Ed25519 verification, P-256, HMAC-SHA512), `CommonCrypto` (PBKDF2-HMAC-SHA512 for BIP-39), `Foundation` (networking, data types).
 
 ## License
 

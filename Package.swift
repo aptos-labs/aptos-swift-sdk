@@ -23,8 +23,14 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "CTweetNaCl",
+            path: "Sources/CTweetNaCl",
+            publicHeadersPath: "include"
+        ),
+        .target(
             name: "AptosSDK",
             dependencies: [
+                "CTweetNaCl",
                 .product(name: "P256K", package: "secp256k1.swift"),
                 .product(name: "BigInt", package: "BigInt"),
             ],
@@ -33,7 +39,8 @@ let package = Package(
         .testTarget(
             name: "AptosSDKTests",
             dependencies: ["AptosSDK"],
-            path: "Tests/AptosSDKTests"
+            path: "Tests/AptosSDKTests",
+            resources: [.copy("TestVectors")]
         ),
     ]
 )

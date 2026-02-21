@@ -101,6 +101,11 @@ extension KeylessAccount: AptosAccount {
         .singleKey
     }
 
+    public var publicKeyBytes: Data {
+        let anyPubKey = AnyPublicKey.keyless(keylessPublicKey)
+        return (try? bcsToBytes(anyPubKey)) ?? Data()
+    }
+
     public func sign(message: Data) throws -> AnySignature {
         guard !isExpired else {
             throw AptosError.keyless(.invalidConfiguration("Keyless account ephemeral key has expired"))

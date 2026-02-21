@@ -1,4 +1,5 @@
 import CryptoKit
+import CTweetNaCl
 import Foundation
 
 // MARK: - Ed25519PublicKey
@@ -99,15 +100,30 @@ public struct Ed25519PrivateKey: Sendable, Equatable {
     }
 
     /// Derives the public key from this private key.
+    ///
+    /// Uses the TweetNaCl reference implementation for deterministic key derivation.
     public func publicKey() throws -> Ed25519PublicKey {
-        let key = try Curve25519.Signing.PrivateKey(rawRepresentation: data)
-        return try Ed25519PublicKey(data: Data(key.publicKey.rawRepresentation))
+        var pk = [UInt8](repeating: 0, count: 32)
+        var sk = [UInt8](repeating: 0, count: 64)
+        let seed = Array(data)
+        crypto_sign_ed25519_seed_keypair(&pk, &sk, seed)
+        return try Ed25519PublicKey(data: Data(pk))
     }
 
-    /// Signs a message with this private key.
+    /// Signs a message with this private key (deterministic, RFC 8032).
+    ///
+    /// Uses the TweetNaCl reference implementation for deterministic Ed25519 signing.
+    /// This produces the same signature bytes as other Aptos SDK implementations.
     public func sign(_ message: Data) throws -> Ed25519Signature {
-        let key = try Curve25519.Signing.PrivateKey(rawRepresentation: data)
-        let sig = try key.signature(for: message)
+        // Build the 64-byte secret key: seed || public_key
+        var pk = [UInt8](repeating: 0, count: 32)
+        var sk = [UInt8](repeating: 0, count: 64)
+        let seed = Array(data)
+        crypto_sign_ed25519_seed_keypair(&pk, &sk, seed)
+
+        var sig = [UInt8](repeating: 0, count: 64)
+        let msg = Array(message)
+        crypto_sign_ed25519_detached(&sig, msg, UInt64(msg.count), sk)
         return try Ed25519Signature(data: Data(sig))
     }
 

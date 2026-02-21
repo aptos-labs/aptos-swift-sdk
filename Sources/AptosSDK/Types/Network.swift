@@ -13,8 +13,9 @@ public enum Network: String, Sendable, CaseIterable {
         switch self {
         case .mainnet: .mainnet
         case .testnet: .testnet
+        case .devnet: .devnet
         case .local: .local
-        case .devnet, .custom: nil
+        case .custom: nil
         }
     }
 }

@@ -167,4 +167,61 @@ struct TransactionTests {
         let bcs = try signed.toBytes()
         #expect(!bcs.isEmpty)
     }
+
+    @Test("createSignedTransaction rejects missing fee payer authenticator")
+    func createSignedTransactionMissingFeePayerAuthenticator() throws {
+        let sender = try Ed25519Account.generate()
+        let raw = RawTransaction(
+            sender: sender.accountAddress,
+            sequenceNumber: 0,
+            payload: .entryFunction(EntryFunction(
+                moduleId: MoveModuleId(address: .one, name: "test"),
+                functionName: "test"
+            )),
+            maxGasAmount: 200_000,
+            gasUnitPrice: 100,
+            expirationTimestampSecs: 1_000_000,
+            chainId: .testnet
+        )
+        let tx = SimpleTransaction(
+            rawTransaction: raw,
+            feePayerAddress: try AccountAddress.fromHex("0x4")
+        )
+        let senderAuth = try TransactionSigner.sign(transaction: .simple(tx), signer: sender)
+        #expect(throws: AptosError.self) {
+            _ = try TransactionSigner.createSignedTransaction(
+                transaction: tx,
+                senderAuthenticator: senderAuth
+            )
+        }
+    }
+
+    @Test("createSignedTransaction rejects unexpected fee payer authenticator")
+    func createSignedTransactionUnexpectedFeePayerAuthenticator() throws {
+        let sender = try Ed25519Account.generate()
+        let feePayer = try Ed25519Account.generate()
+        let raw = RawTransaction(
+            sender: sender.accountAddress,
+            sequenceNumber: 0,
+            payload: .entryFunction(EntryFunction(
+                moduleId: MoveModuleId(address: .one, name: "test"),
+                functionName: "test"
+            )),
+            maxGasAmount: 200_000,
+            gasUnitPrice: 100,
+            expirationTimestampSecs: 1_000_000,
+            chainId: .testnet
+        )
+        let tx = SimpleTransaction(rawTransaction: raw)
+        let senderAuth = try TransactionSigner.sign(transaction: .simple(tx), signer: sender)
+        let feePayerAuth = try TransactionSigner.signAsFeePayer(transaction: .simple(tx), feePayer: feePayer)
+
+        #expect(throws: AptosError.self) {
+            _ = try TransactionSigner.createSignedTransaction(
+                transaction: tx,
+                senderAuthenticator: senderAuth,
+                feePayerAuthenticator: feePayerAuth
+            )
+        }
+    }
 }

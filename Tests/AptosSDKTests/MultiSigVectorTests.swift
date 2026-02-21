@@ -21,7 +21,7 @@ struct MultiSigVectorTests {
 
     @Test("Bitmap: signers [0, 1] = 0xc0000000")
     func bitmapSigners01() throws {
-        let sig = MultiKeySignature.fromSignaturesWithIndices(
+        let sig = try MultiKeySignature.fromSignaturesWithIndices(
             signatures: [
                 (index: 0, signature: .ed25519(try Ed25519Signature(data: Data(repeating: 0, count: 64)))),
                 (index: 1, signature: .ed25519(try Ed25519Signature(data: Data(repeating: 0, count: 64)))),
@@ -33,7 +33,7 @@ struct MultiSigVectorTests {
 
     @Test("Bitmap: signers [0, 2] = 0xa0000000")
     func bitmapSigners02() throws {
-        let sig = MultiKeySignature.fromSignaturesWithIndices(
+        let sig = try MultiKeySignature.fromSignaturesWithIndices(
             signatures: [
                 (index: 0, signature: .ed25519(try Ed25519Signature(data: Data(repeating: 0, count: 64)))),
                 (index: 2, signature: .ed25519(try Ed25519Signature(data: Data(repeating: 0, count: 64)))),
@@ -45,7 +45,7 @@ struct MultiSigVectorTests {
 
     @Test("Bitmap: signers [1, 2] = 0x60000000")
     func bitmapSigners12() throws {
-        let sig = MultiKeySignature.fromSignaturesWithIndices(
+        let sig = try MultiKeySignature.fromSignaturesWithIndices(
             signatures: [
                 (index: 1, signature: .ed25519(try Ed25519Signature(data: Data(repeating: 0, count: 64)))),
                 (index: 2, signature: .ed25519(try Ed25519Signature(data: Data(repeating: 0, count: 64)))),
@@ -138,6 +138,31 @@ struct MultiSigVectorTests {
         }
     }
 
+    @Test("MultiKey signature rejects duplicate signer index")
+    func multiKeySignatureRejectsDuplicateSignerIndex() throws {
+        let sig = try Ed25519Signature(data: Data(repeating: 0, count: 64))
+        #expect(throws: AptosError.self) {
+            _ = try MultiKeySignature.fromSignaturesWithIndices(
+                signatures: [
+                    (index: 0, signature: .ed25519(sig)),
+                    (index: 0, signature: .ed25519(sig)),
+                ],
+                totalKeys: 2
+            )
+        }
+    }
+
+    @Test("MultiKey signature rejects out-of-range signer index")
+    func multiKeySignatureRejectsOutOfRangeSignerIndex() throws {
+        let sig = try Ed25519Signature(data: Data(repeating: 0, count: 64))
+        #expect(throws: AptosError.self) {
+            _ = try MultiKeySignature.fromSignaturesWithIndices(
+                signatures: [(index: 5, signature: .ed25519(sig))],
+                totalKeys: 2
+            )
+        }
+    }
+
     // MARK: - MultiKey
 
     @Test("MultiKey auth key derivation")
@@ -177,6 +202,7 @@ struct MultiSigVectorTests {
         #expect(SigningScheme.multiEd25519.rawValue == 1)
         #expect(SigningScheme.singleKey.rawValue == 2)
         #expect(SigningScheme.multiKey.rawValue == 3)
+        #expect(SigningScheme.keyless.rawValue == 5)
     }
 
     // MARK: - 1-of-1 Degenerate Case

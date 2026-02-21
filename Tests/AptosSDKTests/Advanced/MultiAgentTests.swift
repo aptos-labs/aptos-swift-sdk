@@ -198,4 +198,67 @@ struct MultiAgentTests {
         let decoded = try bcsFromBytes(RawTransactionWithData.self, bytes)
         #expect(decoded == withData)
     }
+
+    @Test("Multi-agent signing validates secondary signer count")
+    func multiAgentSignerCountValidation() throws {
+        let sender = try Ed25519Account.generate()
+        let secondaryAddress = try AccountAddress.fromHex("0x2")
+        let raw = RawTransaction(
+            sender: sender.accountAddress,
+            sequenceNumber: 0,
+            payload: .entryFunction(EntryFunction(
+                moduleId: MoveModuleId(address: .one, name: "test"),
+                functionName: "test"
+            )),
+            maxGasAmount: 200_000,
+            gasUnitPrice: 100,
+            expirationTimestampSecs: 1_000_000,
+            chainId: .testnet
+        )
+
+        let tx = MultiAgentUtils.buildMultiAgentTransaction(
+            rawTransaction: raw,
+            secondarySignerAddresses: [secondaryAddress]
+        )
+
+        #expect(throws: AptosError.self) {
+            _ = try MultiAgentUtils.signMultiAgentTransaction(
+                transaction: tx,
+                sender: sender,
+                secondarySigners: []
+            )
+        }
+    }
+
+    @Test("Multi-agent fee payer address requires fee payer signer")
+    func multiAgentFeePayerRequiresSigner() throws {
+        let sender = try Ed25519Account.generate()
+        let secondary = try Ed25519Account.generate()
+        let raw = RawTransaction(
+            sender: sender.accountAddress,
+            sequenceNumber: 0,
+            payload: .entryFunction(EntryFunction(
+                moduleId: MoveModuleId(address: .one, name: "test"),
+                functionName: "test"
+            )),
+            maxGasAmount: 200_000,
+            gasUnitPrice: 100,
+            expirationTimestampSecs: 1_000_000,
+            chainId: .testnet
+        )
+
+        let tx = MultiAgentUtils.buildMultiAgentTransaction(
+            rawTransaction: raw,
+            secondarySignerAddresses: [secondary.accountAddress],
+            feePayerAddress: try AccountAddress.fromHex("0x4")
+        )
+
+        #expect(throws: AptosError.self) {
+            _ = try MultiAgentUtils.signMultiAgentTransaction(
+                transaction: tx,
+                sender: sender,
+                secondarySigners: [secondary]
+            )
+        }
+    }
 }

@@ -55,7 +55,7 @@ struct KeylessTests {
         )
 
         #expect(account.accountAddress.data.count == 32)
-        #expect(account.signingScheme == .singleKey)
+        #expect(account.signingScheme == .keyless)
         #expect(!account.isExpired)
     }
 
@@ -269,5 +269,27 @@ struct KeylessTests {
 
         // exp=1000000 is far in the past, so JWT should be expired
         #expect(account.isJWTExpired)
+    }
+
+    @Test("sign() throws on expired JWT")
+    func signThrowsOnExpiredJWT() throws {
+        let header = Data(#"{"alg":"none"}"#.utf8).base64EncodedString()
+        let payload = Data(#"{"sub":"user","exp":1000000}"#.utf8).base64EncodedString()
+        let jwt = "\(header).\(payload).sig"
+
+        let ekp = try EphemeralKeyPair()
+        let account = try KeylessAccount(
+            issuer: "https://accounts.google.com",
+            ephemeralKeyPair: ekp,
+            proof: Data(repeating: 0, count: 64),
+            jwt: jwt,
+            pepper: Data(repeating: 0x03, count: 31),
+            uidVal: "user000"
+        )
+
+        #expect(account.isJWTExpired)
+        #expect(throws: AptosError.self) {
+            _ = try account.sign(message: Data("test".utf8))
+        }
     }
 }

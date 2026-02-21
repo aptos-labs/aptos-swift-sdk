@@ -26,6 +26,17 @@ public enum TransactionSigner {
         senderAuthenticator: AccountAuthenticator,
         feePayerAuthenticator: AccountAuthenticator? = nil
     ) throws -> SignedTransaction {
+        if transaction.feePayerAddress != nil, feePayerAuthenticator == nil {
+            throw AptosError.transaction(.invalidAuthenticator(
+                "feePayerAuthenticator is required when feePayerAddress is set"
+            ))
+        }
+        if transaction.feePayerAddress == nil, feePayerAuthenticator != nil {
+            throw AptosError.transaction(.invalidAuthenticator(
+                "feePayerAuthenticator provided without feePayerAddress"
+            ))
+        }
+
         let txAuth: TransactionAuthenticator = if let feePayer = transaction.feePayerAddress,
                                                   let feePayerAuth = feePayerAuthenticator {
             .feePayer(
@@ -59,6 +70,22 @@ public enum TransactionSigner {
         secondaryAuthenticators: [AccountAuthenticator],
         feePayerAuthenticator: AccountAuthenticator? = nil
     ) throws -> SignedTransaction {
+        guard secondaryAuthenticators.count == transaction.secondarySignerAddresses.count else {
+            throw AptosError.transaction(.invalidAuthenticator(
+                "secondaryAuthenticators count (\(secondaryAuthenticators.count)) must match secondarySignerAddresses count (\(transaction.secondarySignerAddresses.count))"
+            ))
+        }
+        if transaction.feePayerAddress != nil, feePayerAuthenticator == nil {
+            throw AptosError.transaction(.invalidAuthenticator(
+                "feePayerAuthenticator is required when feePayerAddress is set"
+            ))
+        }
+        if transaction.feePayerAddress == nil, feePayerAuthenticator != nil {
+            throw AptosError.transaction(.invalidAuthenticator(
+                "feePayerAuthenticator provided without feePayerAddress"
+            ))
+        }
+
         let txAuth: TransactionAuthenticator = if let feePayer = transaction.feePayerAddress,
                                                   let feePayerAuth = feePayerAuthenticator {
             .feePayer(

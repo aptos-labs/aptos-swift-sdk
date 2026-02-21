@@ -42,8 +42,13 @@ public enum FeePayerUtils {
         sender: any AptosAccount,
         feePayer: any AptosAccount
     ) throws -> SignedTransaction {
-        guard transaction.feePayerAddress != nil else {
+        guard let feePayerAddress = transaction.feePayerAddress else {
             throw AptosError.transaction(.buildFailed("Transaction does not have a fee payer address"))
+        }
+        guard feePayerAddress == feePayer.accountAddress else {
+            throw AptosError.transaction(.invalidAuthenticator(
+                "feePayer account address does not match transaction.feePayerAddress"
+            ))
         }
 
         let senderAuth = try TransactionSigner.sign(

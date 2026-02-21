@@ -31,7 +31,7 @@ public struct DerivationPath: Sendable, Equatable {
 
         var parsed: [UInt32] = []
         for segment in segments {
-            let isHardened = segment.hasSuffix("'")
+            let isHardened = segment.hasSuffix("'") || segment.hasSuffix("h") || segment.hasSuffix("H")
             let indexStr = isHardened ? String(segment.dropLast()) : String(segment)
 
             guard let index = UInt32(indexStr) else {

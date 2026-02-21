@@ -74,10 +74,31 @@ public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
 
     /// Creates from raw bytes (32-byte seed).
     public init(data: Data) throws {
-        guard data.count == Self.length else {
+        guard data.count == Self.length || data.count == 64 else {
             throw AptosError.crypto(.invalidKeyLength(expected: Self.length, actual: data.count))
         }
-        self.data = data
+
+        if data.count == Self.length {
+            self.data = data
+            return
+        }
+
+        // Extended key format: seed (32) || public_key (32)
+        let seed = Data(data.prefix(32))
+        let providedPublicKey = Data(data.suffix(32))
+
+        var derivedPublicKey = [UInt8](repeating: 0, count: 32)
+        var secretKey = [UInt8](repeating: 0, count: 64)
+        crypto_sign_ed25519_seed_keypair(&derivedPublicKey, &secretKey, Array(seed))
+
+        guard Data(derivedPublicKey) == providedPublicKey else {
+            throw AptosError.crypto(.invalidPrivateKey(
+                "Extended Ed25519 private key contains mismatched public key bytes"
+            ))
+        }
+
+        // Internally store only the seed; public key is always derived.
+        self.data = seed
     }
 
     /// Creates from a hex string.

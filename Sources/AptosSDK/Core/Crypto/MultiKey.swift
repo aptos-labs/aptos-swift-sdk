@@ -10,11 +10,19 @@ public struct MultiKey: Sendable, Equatable {
     /// The number of signatures required.
     public let signaturesRequired: UInt8
 
+    /// Maximum number of keys allowed by the 4-byte bitmap encoding.
+    public static let maxKeys = 32
+
     /// Creates a new MultiKey.
     public init(publicKeys: [AnyPublicKey], signaturesRequired: UInt8) throws {
         guard !publicKeys.isEmpty else {
             throw AptosError.multiSignature(.invalidThreshold(
                 message: "MultiKey requires at least one public key"
+            ))
+        }
+        guard publicKeys.count <= Self.maxKeys else {
+            throw AptosError.multiSignature(.tooManyKeys(
+                count: publicKeys.count, maximum: Self.maxKeys
             ))
         }
         guard signaturesRequired > 0, signaturesRequired <= publicKeys.count else {
@@ -61,16 +69,37 @@ public struct MultiKeySignature: Sendable, Equatable {
     /// Creates a MultiKeySignature from signatures and their key indices.
     public static func fromSignaturesWithIndices(
         signatures: [(index: Int, signature: AnySignature)],
-        totalKeys _: Int
-    ) -> Self {
+        totalKeys: Int
+    ) throws -> Self {
+        guard totalKeys > 0 else {
+            throw AptosError.multiSignature(.invalidThreshold(
+                message: "totalKeys must be greater than zero"
+            ))
+        }
+        guard totalKeys <= MultiKey.maxKeys else {
+            throw AptosError.multiSignature(.tooManyKeys(
+                count: totalKeys, maximum: MultiKey.maxKeys
+            ))
+        }
+
+        var seen = Set<Int>()
+        for entry in signatures {
+            guard entry.index >= 0, entry.index < totalKeys else {
+                throw AptosError.multiSignature(.invalidSignerIndex(
+                    index: entry.index, totalKeys: totalKeys
+                ))
+            }
+            guard seen.insert(entry.index).inserted else {
+                throw AptosError.multiSignature(.duplicateSignerIndex(index: entry.index))
+            }
+        }
+
         let sorted = signatures.sorted { $0.index < $1.index }
         var bitmapBytes = [UInt8](repeating: 0, count: 4)
         for entry in sorted {
             let byteIndex = entry.index / 8
             let bitIndex = entry.index % 8
-            if byteIndex < 4 {
-                bitmapBytes[byteIndex] |= (1 << (7 - bitIndex))
-            }
+            bitmapBytes[byteIndex] |= (1 << (7 - bitIndex))
         }
         return Self(
             signatures: sorted.map(\.signature),

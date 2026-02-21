@@ -88,11 +88,18 @@ public struct Secp256k1PrivateKey: Sendable, Equatable, CustomStringConvertible,
 
     /// Generates a new random private key.
     public static func generate() -> Self {
-        // P256K key generation is guaranteed to succeed with random entropy
-        guard let key = try? P256K.Signing.PrivateKey() else {
-            fatalError("Failed to generate secp256k1 key - system entropy unavailable")
+        if let key = try? P256K.Signing.PrivateKey() {
+            return Self(unchecked: Data(key.dataRepresentation))
         }
-        return Self(unchecked: Data(key.dataRepresentation))
+
+        // Fallback path: sample random 32-byte candidates until one is a valid scalar.
+        var rng = SystemRandomNumberGenerator()
+        while true {
+            let candidate = Data((0 ..< Self.length).map { _ in UInt8.random(in: UInt8.min ... UInt8.max, using: &rng) })
+            if (try? P256K.Signing.PrivateKey(dataRepresentation: candidate)) != nil {
+                return Self(unchecked: candidate)
+            }
+        }
     }
 
     /// Creates from raw bytes.

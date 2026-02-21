@@ -28,6 +28,7 @@ public struct MultiKeyAccount: Sendable {
                 required: Int(multiKey.signaturesRequired), provided: signers.count
             ))
         }
+        try Self.validateIndices(signerIndices, totalKeys: multiKey.publicKeys.count)
         self.multiKey = multiKey
         self.signers = signers
         self.signerIndices = signerIndices
@@ -42,10 +43,25 @@ public struct MultiKeyAccount: Sendable {
             let sig = try signer.sign(message: message)
             indexedSigs.append((index: signerIndices[i], signature: sig))
         }
-        return MultiKeySignature.fromSignaturesWithIndices(
+        return try MultiKeySignature.fromSignaturesWithIndices(
             signatures: indexedSigs,
             totalKeys: multiKey.publicKeys.count
         )
+    }
+
+    /// Validates signer indices: no duplicates, all in range.
+    private static func validateIndices(_ indices: [Int], totalKeys: Int) throws {
+        var seen = Set<Int>()
+        for index in indices {
+            guard index >= 0, index < totalKeys else {
+                throw AptosError.multiSignature(.invalidSignerIndex(
+                    index: index, totalKeys: totalKeys
+                ))
+            }
+            guard seen.insert(index).inserted else {
+                throw AptosError.multiSignature(.duplicateSignerIndex(index: index))
+            }
+        }
     }
 }
 
@@ -64,7 +80,10 @@ extension MultiKeyAccount: AptosAccount {
         // MultiKey returns multiple signatures, so we wrap in the first one
         // This shouldn't normally be called directly
         let multiSig: MultiKeySignature = try sign(message: message)
-        return multiSig.signatures.first!
+        guard let first = multiSig.signatures.first else {
+            throw AptosError.multiSignature(.insufficientSignatures(required: 1, provided: 0))
+        }
+        return first
     }
 
     public func signWithAuthenticator(message: Data) throws -> AccountAuthenticator {

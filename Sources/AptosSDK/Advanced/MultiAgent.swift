@@ -46,6 +46,22 @@ public enum MultiAgentUtils {
         secondarySigners: [any AptosAccount],
         feePayer: (any AptosAccount)? = nil
     ) throws -> SignedTransaction {
+        guard secondarySigners.count == transaction.secondarySignerAddresses.count else {
+            throw AptosError.transaction(.invalidAuthenticator(
+                "secondarySigners count (\(secondarySigners.count)) must match secondarySignerAddresses count (\(transaction.secondarySignerAddresses.count))"
+            ))
+        }
+        if transaction.feePayerAddress != nil, feePayer == nil {
+            throw AptosError.transaction(.invalidAuthenticator(
+                "Transaction includes feePayerAddress but no feePayer account was provided"
+            ))
+        }
+        if transaction.feePayerAddress == nil, feePayer != nil {
+            throw AptosError.transaction(.invalidAuthenticator(
+                "feePayer account provided without a feePayerAddress in the transaction"
+            ))
+        }
+
         // All signers sign the same signing message
         let senderAuth = try TransactionSigner.sign(
             transaction: .multiAgent(transaction),

@@ -59,7 +59,8 @@ public struct KeylessAccount: Sendable {
     ///   - pepper: The pepper from the pepper service (31 bytes)
     ///   - uidKey: The JWT claim key for the user ID (default: "sub")
     ///   - uidVal: The user ID value from the JWT
-    ///   - audience: Optional OIDC audience/client ID override. If nil, attempts to read from JWT.
+    ///   - audience: Optional OIDC audience/client ID override. If nil, reads from JWT `aud` claim.
+    ///               Throws if no audience can be resolved.
     ///   - proofExpiryDateSecs: Optional expiry for the proof
     ///   - address: Optional override address (for rotated accounts)
     public init(
@@ -74,13 +75,26 @@ public struct KeylessAccount: Sendable {
         proofExpiryDateSecs: UInt64? = nil,
         address: AccountAddress? = nil
     ) throws {
+        guard pepper.count == 31 else {
+            throw AptosError.keyless(.invalidConfiguration(
+                "Keyless pepper must be exactly 31 bytes, got \(pepper.count)"
+            ))
+        }
+
+        let resolvedAudience = audience ?? Self.extractJWTAudience(jwt)
+        guard let resolvedAudience, !resolvedAudience.isEmpty else {
+            throw AptosError.keyless(.invalidJWT(
+                "JWT is missing 'aud' claim; provide audience explicitly via KeylessAccount initializer"
+            ))
+        }
+
         self.ephemeralKeyPair = ephemeralKeyPair
         self.proof = proof
         self.jwt = jwt
         self.pepper = pepper
         self.uidKey = uidKey
         self.uidVal = uidVal
-        self.audience = audience ?? Self.extractJWTAudience(jwt) ?? ""
+        self.audience = resolvedAudience
         self.proofExpiryDateSecs = proofExpiryDateSecs
 
         // Compute identity commitment: SHA3-256(pepper || uidKey || uidVal)

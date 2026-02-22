@@ -51,7 +51,8 @@ struct KeylessTests {
             jwt: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test",
             pepper: Data(repeating: 0x01, count: 31),
             uidKey: "sub",
-            uidVal: "user123"
+            uidVal: "user123",
+            audience: "test-client"
         )
 
         #expect(account.accountAddress.data.count == 32)
@@ -73,7 +74,8 @@ struct KeylessTests {
             jwt: "jwt1",
             pepper: pepper,
             uidKey: "sub",
-            uidVal: "user456"
+            uidVal: "user456",
+            audience: "test-client"
         )
 
         let account2 = try KeylessAccount(
@@ -83,7 +85,8 @@ struct KeylessTests {
             jwt: "jwt2",
             pepper: pepper,
             uidKey: "sub",
-            uidVal: "user456"
+            uidVal: "user456",
+            audience: "test-client"
         )
 
         // Same issuer + pepper + uid → same address, regardless of ephemeral key
@@ -100,7 +103,8 @@ struct KeylessTests {
             proof: Data(repeating: 0xCD, count: 64),
             jwt: "test.jwt",
             pepper: Data(repeating: 0x02, count: 31),
-            uidVal: "user789"
+            uidVal: "user789",
+            audience: "test-client"
         )
 
         let message = Data("test transaction".utf8)
@@ -123,7 +127,8 @@ struct KeylessTests {
             proof: Data(repeating: 0, count: 64),
             jwt: "test",
             pepper: Data(repeating: 0x03, count: 31),
-            uidVal: "user000"
+            uidVal: "user000",
+            audience: "test-client"
         )
 
         let authKey = try account.authenticationKey()
@@ -193,7 +198,8 @@ struct KeylessTests {
             proof: Data(repeating: 0, count: 64),
             jwt: "test",
             pepper: Data(repeating: 0x03, count: 31),
-            uidVal: "user000"
+            uidVal: "user000",
+            audience: "test-client"
         )
         #expect(!account.isProofExpired)
     }
@@ -209,6 +215,7 @@ struct KeylessTests {
             jwt: "test",
             pepper: Data(repeating: 0x03, count: 31),
             uidVal: "user000",
+            audience: "test-client",
             proofExpiryDateSecs: pastExpiry
         )
         #expect(account.isProofExpired)
@@ -225,6 +232,7 @@ struct KeylessTests {
             jwt: "test",
             pepper: Data(repeating: 0x03, count: 31),
             uidVal: "user000",
+            audience: "test-client",
             proofExpiryDateSecs: futureExpiry
         )
         // Neither ephemeral key nor proof expired
@@ -242,6 +250,7 @@ struct KeylessTests {
             jwt: "test",
             pepper: Data(repeating: 0x03, count: 31),
             uidVal: "user000",
+            audience: "test-client",
             proofExpiryDateSecs: pastExpiry
         )
 
@@ -264,7 +273,8 @@ struct KeylessTests {
             proof: Data(repeating: 0, count: 64),
             jwt: jwt,
             pepper: Data(repeating: 0x03, count: 31),
-            uidVal: "user000"
+            uidVal: "user000",
+            audience: "test-client"
         )
 
         // exp=1000000 is far in the past, so JWT should be expired
@@ -284,12 +294,44 @@ struct KeylessTests {
             proof: Data(repeating: 0, count: 64),
             jwt: jwt,
             pepper: Data(repeating: 0x03, count: 31),
-            uidVal: "user000"
+            uidVal: "user000",
+            audience: "test-client"
         )
 
         #expect(account.isJWTExpired)
         #expect(throws: AptosError.self) {
             _ = try account.sign(message: Data("test".utf8))
+        }
+    }
+
+    @Test("Keyless account creation fails when audience is missing")
+    func keylessAccountCreationMissingAudienceThrows() throws {
+        let ekp = try EphemeralKeyPair()
+        #expect(throws: AptosError.self) {
+            _ = try KeylessAccount(
+                issuer: "https://accounts.google.com",
+                ephemeralKeyPair: ekp,
+                proof: Data(repeating: 0, count: 64),
+                jwt: "invalid.jwt",
+                pepper: Data(repeating: 0x03, count: 31),
+                uidVal: "user000"
+            )
+        }
+    }
+
+    @Test("Keyless account creation fails for invalid pepper length")
+    func keylessAccountCreationInvalidPepperLengthThrows() throws {
+        let ekp = try EphemeralKeyPair()
+        #expect(throws: AptosError.self) {
+            _ = try KeylessAccount(
+                issuer: "https://accounts.google.com",
+                ephemeralKeyPair: ekp,
+                proof: Data(repeating: 0, count: 64),
+                jwt: "invalid.jwt",
+                pepper: Data(repeating: 0x03, count: 30),
+                uidVal: "user000",
+                audience: "test-client"
+            )
         }
     }
 }

@@ -322,8 +322,7 @@ public actor AptosHTTPClient {
             let cappedRetryAfter = min(retryAfter, config.maxDelayMs)
             return cappedRetryAfter * 1_000_000 // ms to ns
         }
-        let multiplier = max(config.backoffMultiplier, 1.0)
-        let computedMs = Double(config.initialBackoffMs) * pow(multiplier, Double(attempt))
+        let computedMs = Double(config.initialBackoffMs) * pow(config.backoffMultiplier, Double(attempt))
         let cappedMs = min(computedMs, Double(config.maxDelayMs))
         return UInt64(cappedMs) * 1_000_000 // ms to ns
     }

@@ -101,6 +101,19 @@ struct AuthenticationKeyTests {
         #expect(authKey1.data.count == 32)
     }
 
+    @Test("Keyless authentication key requires 31-byte pepper")
+    func keylessAuthKeyPepperLengthValidation() throws {
+        #expect(throws: AptosError.self) {
+            _ = try AuthenticationKey.fromKeyless(
+                issuer: "https://accounts.google.com",
+                audience: "my-client-id",
+                uidKey: "sub",
+                uidVal: "user123",
+                pepper: Data(repeating: 0xAB, count: 30)
+            )
+        }
+    }
+
     @Test("Authentication key hex roundtrip")
     func hexRoundtrip() throws {
         let privKey = Ed25519PrivateKey.generate()

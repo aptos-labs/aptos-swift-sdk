@@ -261,4 +261,40 @@ struct MultiAgentTests {
             )
         }
     }
+
+    @Test("Multi-agent fee payer signer must match fee payer address")
+    func multiAgentFeePayerAddressMismatch() throws {
+        let sender = try Ed25519Account.generate()
+        let secondary = try Ed25519Account.generate()
+        let expectedFeePayerAddress = try AccountAddress.fromHex("0x4")
+        let wrongFeePayer = try Ed25519Account.generate()
+
+        let raw = RawTransaction(
+            sender: sender.accountAddress,
+            sequenceNumber: 0,
+            payload: .entryFunction(EntryFunction(
+                moduleId: MoveModuleId(address: .one, name: "test"),
+                functionName: "test"
+            )),
+            maxGasAmount: 200_000,
+            gasUnitPrice: 100,
+            expirationTimestampSecs: 1_000_000,
+            chainId: .testnet
+        )
+
+        let tx = MultiAgentUtils.buildMultiAgentTransaction(
+            rawTransaction: raw,
+            secondarySignerAddresses: [secondary.accountAddress],
+            feePayerAddress: expectedFeePayerAddress
+        )
+
+        #expect(throws: AptosError.self) {
+            _ = try MultiAgentUtils.signMultiAgentTransaction(
+                transaction: tx,
+                sender: sender,
+                secondarySigners: [secondary],
+                feePayer: wrongFeePayer
+            )
+        }
+    }
 }

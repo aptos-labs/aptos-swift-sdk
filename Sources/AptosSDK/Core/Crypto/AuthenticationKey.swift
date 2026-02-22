@@ -63,7 +63,7 @@ public struct AuthenticationKey: Sendable, Equatable, Hashable {
     ///   SHA3-256(issuer) ||
     ///   SHA3-256(audience) ||
     ///   SHA3-256(uidKey || uidVal) ||
-    ///   pepper ||
+    ///   pepper (31 bytes) ||
     ///   0x05
     /// )
     public static func fromKeyless(
@@ -73,6 +73,11 @@ public struct AuthenticationKey: Sendable, Equatable, Hashable {
         uidVal: String,
         pepper: Data
     ) throws -> Self {
+        guard pepper.count == 31 else {
+            throw AptosError.keyless(.invalidConfiguration(
+                "Keyless pepper must be exactly 31 bytes, got \(pepper.count)"
+            ))
+        }
         var data = Data()
         data.append(SHA3.sha256(Data(issuer.utf8)))
         data.append(SHA3.sha256(Data(audience.utf8)))
@@ -88,7 +93,12 @@ public struct AuthenticationKey: Sendable, Equatable, Hashable {
 
     /// Derives the account address from this authentication key.
     public func accountAddress() -> AccountAddress {
-        AccountAddress(bytes: data) ?? .zero
+        guard let address = AccountAddress(bytes: data) else {
+            preconditionFailure(
+                "AuthenticationKey data must produce a valid AccountAddress; got invalid bytes."
+            )
+        }
+        return address
     }
 
     /// Returns the hex string representation.

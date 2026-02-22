@@ -61,6 +61,13 @@ public enum MultiAgentUtils {
                 "feePayer account provided without a feePayerAddress in the transaction"
             ))
         }
+        if let feePayerAddress = transaction.feePayerAddress,
+           let feePayer,
+           feePayer.accountAddress != feePayerAddress {
+            throw AptosError.transaction(.invalidAuthenticator(
+                "feePayer.accountAddress does not match transaction.feePayerAddress"
+            ))
+        }
 
         // All signers sign the same signing message
         let senderAuth = try TransactionSigner.sign(

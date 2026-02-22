@@ -209,6 +209,7 @@ public struct RetryConfig: Sendable {
     public var initialBackoffMs: UInt64
 
     /// Multiplier applied to backoff after each retry.
+    /// Must be >= 1.0.
     public var backoffMultiplier: Double
 
     /// Maximum delay in milliseconds for retry backoff.
@@ -220,6 +221,7 @@ public struct RetryConfig: Sendable {
         backoffMultiplier: Double = 2.0,
         maxDelayMs: UInt64 = 5000
     ) {
+        precondition(backoffMultiplier >= 1.0, "RetryConfig.backoffMultiplier must be >= 1.0")
         self.maxRetries = maxRetries
         self.initialBackoffMs = initialBackoffMs
         self.backoffMultiplier = backoffMultiplier

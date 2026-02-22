@@ -67,7 +67,31 @@ public struct MultiKeySignature: Sendable, Equatable {
     }
 
     /// Creates a MultiKeySignature from signatures and their key indices.
+    ///
+    /// This method preserves legacy behavior and does not validate duplicate or
+    /// out-of-range indices. For validated construction, use
+    /// `validatedFromSignaturesWithIndices(...)`.
     public static func fromSignaturesWithIndices(
+        signatures: [(index: Int, signature: AnySignature)],
+        totalKeys _: Int
+    ) -> Self {
+        let sorted = signatures.sorted { $0.index < $1.index }
+        var bitmapBytes = [UInt8](repeating: 0, count: 4)
+        for entry in sorted {
+            let byteIndex = entry.index / 8
+            let bitIndex = entry.index % 8
+            if byteIndex < 4 {
+                bitmapBytes[byteIndex] |= (1 << (7 - bitIndex))
+            }
+        }
+        return Self(
+            signatures: sorted.map(\.signature),
+            bitmap: Data(bitmapBytes)
+        )
+    }
+
+    /// Creates a MultiKeySignature from signatures and their key indices with validation.
+    public static func validatedFromSignaturesWithIndices(
         signatures: [(index: Int, signature: AnySignature)],
         totalKeys: Int
     ) throws -> Self {
@@ -94,17 +118,7 @@ public struct MultiKeySignature: Sendable, Equatable {
             }
         }
 
-        let sorted = signatures.sorted { $0.index < $1.index }
-        var bitmapBytes = [UInt8](repeating: 0, count: 4)
-        for entry in sorted {
-            let byteIndex = entry.index / 8
-            let bitIndex = entry.index % 8
-            bitmapBytes[byteIndex] |= (1 << (7 - bitIndex))
-        }
-        return Self(
-            signatures: sorted.map(\.signature),
-            bitmap: Data(bitmapBytes)
-        )
+        return fromSignaturesWithIndices(signatures: signatures, totalKeys: totalKeys)
     }
 }
 

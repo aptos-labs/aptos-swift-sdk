@@ -43,7 +43,7 @@ public struct MultiKeyAccount: Sendable {
             let sig = try signer.sign(message: message)
             indexedSigs.append((index: signerIndices[i], signature: sig))
         }
-        return try MultiKeySignature.fromSignaturesWithIndices(
+        return try MultiKeySignature.validatedFromSignaturesWithIndices(
             signatures: indexedSigs,
             totalKeys: multiKey.publicKeys.count
         )

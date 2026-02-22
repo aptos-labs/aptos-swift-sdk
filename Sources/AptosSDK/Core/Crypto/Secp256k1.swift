@@ -93,14 +93,19 @@ public struct Secp256k1PrivateKey: Sendable, Equatable, CustomStringConvertible,
 
         // Fallback path: sample random 32-byte candidates until one is a valid scalar.
         var rng = SystemRandomNumberGenerator()
-        while true {
+        let maxAttempts = 1000
+        var attempts = 0
+        while attempts < maxAttempts {
             let candidate = Data((0 ..< Self.length).map { _ in
                 UInt8.random(in: UInt8.min ... UInt8.max, using: &rng)
             })
             if (try? P256K.Signing.PrivateKey(dataRepresentation: candidate)) != nil {
                 return Self(unchecked: candidate)
             }
+            attempts += 1
         }
+
+        preconditionFailure("Failed to generate a valid secp256k1 private key after \(maxAttempts) attempts")
     }
 
     /// Creates from raw bytes.

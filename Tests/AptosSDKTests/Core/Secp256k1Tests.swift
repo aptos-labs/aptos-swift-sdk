@@ -13,6 +13,13 @@ struct Secp256k1Tests {
         #expect(pubKey.data.count == 33) // Compressed
     }
 
+    @Test("generateOrThrow rejects non-positive max attempts")
+    func generateOrThrowRejectsInvalidMaxAttempts() throws {
+        #expect(throws: AptosError.self) {
+            _ = try Secp256k1PrivateKey.generateOrThrow(maxAttempts: 0)
+        }
+    }
+
     @Test("Sign and verify")
     func signAndVerify() throws {
         let privKey = Secp256k1PrivateKey.generate()

@@ -17,8 +17,24 @@ public actor LRUCache<Key: Hashable & Sendable, Value: Sendable> {
 
     /// Creates a new LRU cache.
     public init(maxSize: Int = 100, ttl: TimeInterval = 300) {
-        self.maxSize = maxSize
-        self.ttl = ttl
+        let effectiveMaxSize: Int
+        if maxSize <= 0 {
+            assertionFailure("LRUCache maxSize must be > 0; clamping to 1")
+            effectiveMaxSize = 1
+        } else {
+            effectiveMaxSize = maxSize
+        }
+
+        let effectiveTTL: TimeInterval
+        if ttl < 0 {
+            assertionFailure("LRUCache ttl must be >= 0; clamping to 0")
+            effectiveTTL = 0
+        } else {
+            effectiveTTL = ttl
+        }
+
+        self.maxSize = effectiveMaxSize
+        self.ttl = effectiveTTL
     }
 
     /// Gets a value from the cache, returning nil if expired or not found.

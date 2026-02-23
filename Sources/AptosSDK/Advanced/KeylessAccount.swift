@@ -59,7 +59,8 @@ public struct KeylessAccount: Sendable {
     ///   - pepper: The pepper from the pepper service (31 bytes)
     ///   - uidKey: The JWT claim key for the user ID (default: "sub")
     ///   - uidVal: The user ID value from the JWT
-    ///   - audience: Optional OIDC audience/client ID override. If nil, reads from JWT `aud` claim.
+    ///   - audience: Optional OIDC audience/client ID override (must be non-empty).
+    ///               If nil, reads from JWT `aud` claim.
     ///               Throws if no audience can be resolved.
     ///   - proofExpiryDateSecs: Optional expiry for the proof
     ///   - address: Optional override address (for rotated accounts)
@@ -81,11 +82,21 @@ public struct KeylessAccount: Sendable {
             ))
         }
 
-        let resolvedAudience = audience ?? Self.extractJWTAudience(jwt)
-        guard let resolvedAudience, !resolvedAudience.isEmpty else {
-            throw AptosError.keyless(.invalidJWT(
-                "JWT is missing 'aud' claim; provide audience explicitly via KeylessAccount initializer"
-            ))
+        let resolvedAudience: String
+        if let explicitAudience = audience {
+            guard !explicitAudience.isEmpty else {
+                throw AptosError.keyless(.invalidConfiguration(
+                    "Explicit audience override must not be empty"
+                ))
+            }
+            resolvedAudience = explicitAudience
+        } else {
+            guard let jwtAudience = Self.extractJWTAudience(jwt), !jwtAudience.isEmpty else {
+                throw AptosError.keyless(.invalidJWT(
+                    "JWT is missing 'aud' claim; provide audience explicitly via KeylessAccount initializer"
+                ))
+            }
+            resolvedAudience = jwtAudience
         }
 
         self.ephemeralKeyPair = ephemeralKeyPair

@@ -334,4 +334,20 @@ struct KeylessTests {
             )
         }
     }
+
+    @Test("Keyless account creation fails for empty explicit audience")
+    func keylessAccountCreationEmptyExplicitAudienceThrows() throws {
+        let ekp = try EphemeralKeyPair()
+        #expect(throws: AptosError.self) {
+            _ = try KeylessAccount(
+                issuer: "https://accounts.google.com",
+                ephemeralKeyPair: ekp,
+                proof: Data(repeating: 0, count: 64),
+                jwt: "invalid.jwt",
+                pepper: Data(repeating: 0x03, count: 31),
+                uidVal: "user000",
+                audience: ""
+            )
+        }
+    }
 }

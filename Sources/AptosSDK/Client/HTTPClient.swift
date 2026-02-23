@@ -17,6 +17,7 @@ public enum AptosAPIType: String, Sendable {
 public actor AptosHTTPClient {
     private let config: AptosConfig
     private let session: URLSession
+    private let retryAfterDateFormatters: [DateFormatter]
 
     public init(config: AptosConfig) {
         self.config = config
@@ -26,6 +27,7 @@ public actor AptosHTTPClient {
             "User-Agent": AptosConstants.userAgent,
         ]
         session = URLSession(configuration: urlConfig)
+        retryAfterDateFormatters = Self.makeRetryAfterDateFormatters()
     }
 
     // MARK: - JSON Requests
@@ -297,17 +299,7 @@ public actor AptosHTTPClient {
             return UInt64(seconds * 1000)
         }
 
-        let formats = [
-            "EEE',' dd MMM yyyy HH':'mm':'ss zzz", // IMF-fixdate
-            "EEEE',' dd-MMM-yy HH':'mm':'ss zzz", // obsolete RFC 850
-            "EEE MMM d HH':'mm':'ss yyyy", // ANSI C's asctime()
-        ]
-
-        for format in formats {
-            let formatter = DateFormatter()
-            formatter.locale = Locale(identifier: "en_US_POSIX")
-            formatter.timeZone = TimeZone(secondsFromGMT: 0)
-            formatter.dateFormat = format
+        for formatter in retryAfterDateFormatters {
             if let date = formatter.date(from: trimmed) {
                 let secondsUntilRetry = max(0, date.timeIntervalSinceNow)
                 return UInt64(secondsUntilRetry * 1000)
@@ -325,6 +317,21 @@ public actor AptosHTTPClient {
         let computedMs = Double(config.initialBackoffMs) * pow(config.backoffMultiplier, Double(attempt))
         let cappedMs = min(computedMs, Double(config.maxDelayMs))
         return UInt64(cappedMs) * 1_000_000 // ms to ns
+    }
+
+    private static func makeRetryAfterDateFormatters() -> [DateFormatter] {
+        let formats = [
+            "EEE',' dd MMM yyyy HH':'mm':'ss zzz", // IMF-fixdate
+            "EEEE',' dd-MMM-yy HH':'mm':'ss zzz", // obsolete RFC 850
+            "EEE MMM d HH':'mm':'ss yyyy", // ANSI C's asctime()
+        ]
+        return formats.map { format in
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            formatter.dateFormat = format
+            return formatter
+        }
     }
 }
 

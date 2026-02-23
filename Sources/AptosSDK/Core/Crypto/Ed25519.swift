@@ -55,7 +55,10 @@ extension Ed25519PublicKey: BCSSerializable, BCSDeserializable {
 
 // MARK: - Ed25519PrivateKey
 
-/// Ed25519 private key (32 bytes).
+/// Ed25519 private key.
+///
+/// Stored internally as a 32-byte seed. Initialization also accepts the
+/// 64-byte extended format (`seed || public_key`) and normalizes it to seed form.
 ///
 /// Conforms to `CustomStringConvertible` and `CustomDebugStringConvertible`
 /// with redacted output to prevent accidental logging of key material.
@@ -71,7 +74,7 @@ public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
         return Self(unchecked: Data(key.rawRepresentation))
     }
 
-    /// Creates from raw bytes (32-byte seed).
+    /// Creates from raw bytes (32-byte seed or 64-byte extended key).
     public init(data: Data) throws {
         guard data.count == Self.length || data.count == 64 else {
             throw AptosError.crypto(.invalidPrivateKey(

@@ -87,25 +87,34 @@ public struct Secp256k1PrivateKey: Sendable, Equatable, CustomStringConvertible,
 
     /// Generates a new random private key.
     public static func generate() -> Self {
+        // Preserve non-throwing API: retry bounded generation batches until success.
+        while true {
+            if let key = try? generateOrThrow(maxAttempts: 1000) {
+                return key
+            }
+        }
+    }
+
+    /// Generates a new random private key with bounded attempts.
+    ///
+    /// Use this API when callers need recoverable failure handling.
+    public static func generateOrThrow(maxAttempts: Int = 1000) throws -> Self {
+        guard maxAttempts > 0 else {
+            throw AptosError.invalidArgument("maxAttempts must be greater than zero")
+        }
+
         if let key = try? P256K.Signing.PrivateKey() {
             return Self(unchecked: Data(key.dataRepresentation))
         }
 
         // Fallback path: sample random 32-byte candidates until one is a valid scalar.
         var rng = SystemRandomNumberGenerator()
-        let maxAttempts = 1000
-        var attempts = 0
-        while attempts < maxAttempts {
-            let candidate = Data((0 ..< Self.length).map { _ in
-                UInt8.random(in: UInt8.min ... UInt8.max, using: &rng)
-            })
-            if (try? P256K.Signing.PrivateKey(dataRepresentation: candidate)) != nil {
-                return Self(unchecked: candidate)
-            }
-            attempts += 1
+        guard let candidate = randomValidCandidate(using: &rng, maxAttempts: maxAttempts) else {
+            throw AptosError.crypto(.invalidPrivateKey(
+                "Failed to generate a valid secp256k1 private key after \(maxAttempts) attempts"
+            ))
         }
-
-        preconditionFailure("Failed to generate a valid secp256k1 private key after \(maxAttempts) attempts")
+        return Self(unchecked: candidate)
     }
 
     /// Creates from raw bytes.
@@ -173,6 +182,23 @@ public struct Secp256k1PrivateKey: Sendable, Equatable, CustomStringConvertible,
 
     private init(unchecked data: Data) {
         self.data = data
+    }
+
+    private static func randomValidCandidate(
+        using rng: inout SystemRandomNumberGenerator,
+        maxAttempts: Int
+    ) -> Data? {
+        var attempts = 0
+        while attempts < maxAttempts {
+            let candidate = Data((0 ..< Self.length).map { _ in
+                UInt8.random(in: UInt8.min ... UInt8.max, using: &rng)
+            })
+            if (try? P256K.Signing.PrivateKey(dataRepresentation: candidate)) != nil {
+                return candidate
+            }
+            attempts += 1
+        }
+        return nil
     }
 }
 

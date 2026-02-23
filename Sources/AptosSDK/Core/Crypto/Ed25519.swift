@@ -93,6 +93,11 @@ public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
 
         var derivedPublicKey = [UInt8](repeating: 0, count: 32)
         var secretKey = [UInt8](repeating: 0, count: 64)
+        defer {
+            for i in secretKey.indices {
+                secretKey[i] = 0
+            }
+        }
         crypto_sign_ed25519_seed_keypair(&derivedPublicKey, &secretKey, Array(seed))
 
         guard Data(derivedPublicKey) == providedPublicKey else {
@@ -132,6 +137,11 @@ public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
     public func publicKey() throws -> Ed25519PublicKey {
         var pk = [UInt8](repeating: 0, count: 32)
         var sk = [UInt8](repeating: 0, count: 64)
+        defer {
+            for i in sk.indices {
+                sk[i] = 0
+            }
+        }
         let seed = Array(data)
         crypto_sign_ed25519_seed_keypair(&pk, &sk, seed)
         return try Ed25519PublicKey(data: Data(pk))
@@ -145,6 +155,11 @@ public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
         // Build the 64-byte secret key: seed || public_key
         var pk = [UInt8](repeating: 0, count: 32)
         var sk = [UInt8](repeating: 0, count: 64)
+        defer {
+            for i in sk.indices {
+                sk[i] = 0
+            }
+        }
         let seed = Array(data)
         crypto_sign_ed25519_seed_keypair(&pk, &sk, seed)
 

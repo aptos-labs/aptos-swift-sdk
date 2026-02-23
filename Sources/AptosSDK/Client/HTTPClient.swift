@@ -296,13 +296,13 @@ public actor AptosHTTPClient {
 
         let trimmed = headerValue.trimmingCharacters(in: .whitespacesAndNewlines)
         if let seconds = Double(trimmed), seconds >= 0 {
-            return UInt64(seconds * 1000)
+            return clampedRetryAfterMillis(seconds: seconds)
         }
 
         for formatter in retryAfterDateFormatters {
             if let date = formatter.date(from: trimmed) {
                 let secondsUntilRetry = max(0, date.timeIntervalSinceNow)
-                return UInt64(secondsUntilRetry * 1000)
+                return clampedRetryAfterMillis(seconds: secondsUntilRetry)
             }
         }
 
@@ -317,6 +317,19 @@ public actor AptosHTTPClient {
         let computedMs = Double(config.initialBackoffMs) * pow(config.backoffMultiplier, Double(attempt))
         let cappedMs = min(computedMs, Double(config.maxDelayMs))
         return UInt64(cappedMs) * 1_000_000 // ms to ns
+    }
+
+    private func clampedRetryAfterMillis(seconds: Double) -> UInt64? {
+        guard seconds.isFinite, seconds >= 0 else { return nil }
+        let millis = seconds * 1000
+        guard millis.isFinite, millis >= 0 else { return nil }
+        let maxMillisAsDouble = min(Double(config.maxDelayMs), Double(UInt64.max))
+        let cappedMillis = min(millis, maxMillisAsDouble)
+        if cappedMillis >= Double(UInt64.max) {
+            return UInt64.max
+        }
+        let truncatedMillis = UInt64(cappedMillis.rounded(.down))
+        return min(truncatedMillis, config.maxDelayMs)
     }
 
     private static func makeRetryAfterDateFormatters() -> [DateFormatter] {

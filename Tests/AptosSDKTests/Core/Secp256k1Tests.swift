@@ -6,16 +6,23 @@ import Testing
 struct Secp256k1Tests {
     @Test("Generate key pair")
     func generateKeyPair() throws {
-        let privKey = Secp256k1PrivateKey.generate()
+        let privKey = try Secp256k1PrivateKey.generate()
         #expect(privKey.data.count == 32)
 
         let pubKey = try privKey.publicKey()
         #expect(pubKey.data.count == 33) // Compressed
     }
 
+    @Test("generateOrThrow rejects non-positive max attempts")
+    func generateOrThrowRejectsInvalidMaxAttempts() throws {
+        #expect(throws: AptosError.self) {
+            _ = try Secp256k1PrivateKey.generateOrThrow(maxAttempts: 0)
+        }
+    }
+
     @Test("Sign and verify")
     func signAndVerify() throws {
-        let privKey = Secp256k1PrivateKey.generate()
+        let privKey = try Secp256k1PrivateKey.generate()
         let pubKey = try privKey.publicKey()
 
         let message = Data("test message".utf8)
@@ -28,7 +35,7 @@ struct Secp256k1Tests {
 
     @Test("AIP-80 format")
     func aip80Format() throws {
-        let privKey = Secp256k1PrivateKey.generate()
+        let privKey = try Secp256k1PrivateKey.generate()
         let aip80 = privKey.toAIP80()
         #expect(aip80.hasPrefix("secp256k1-priv-"))
 
@@ -45,7 +52,7 @@ struct Secp256k1Tests {
 
     @Test("BCS roundtrip for public key")
     func bcsRoundtripPublicKey() throws {
-        let privKey = Secp256k1PrivateKey.generate()
+        let privKey = try Secp256k1PrivateKey.generate()
         let pubKey = try privKey.publicKey()
 
         let data = try bcsToBytes(pubKey)

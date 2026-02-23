@@ -10,11 +10,19 @@ public struct MultiKey: Sendable, Equatable {
     /// The number of signatures required.
     public let signaturesRequired: UInt8
 
+    /// Maximum number of keys allowed by the 4-byte bitmap encoding.
+    public static let maxKeys = 32
+
     /// Creates a new MultiKey.
     public init(publicKeys: [AnyPublicKey], signaturesRequired: UInt8) throws {
         guard !publicKeys.isEmpty else {
             throw AptosError.multiSignature(.invalidThreshold(
                 message: "MultiKey requires at least one public key"
+            ))
+        }
+        guard publicKeys.count <= Self.maxKeys else {
+            throw AptosError.multiSignature(.tooManyKeys(
+                count: publicKeys.count, maximum: Self.maxKeys
             ))
         }
         guard signaturesRequired > 0, signaturesRequired <= publicKeys.count else {
@@ -59,6 +67,10 @@ public struct MultiKeySignature: Sendable, Equatable {
     }
 
     /// Creates a MultiKeySignature from signatures and their key indices.
+    ///
+    /// This method preserves legacy behavior and does not validate duplicate or
+    /// out-of-range indices. For validated construction, use
+    /// `validatedFromSignaturesWithIndices(...)`.
     public static func fromSignaturesWithIndices(
         signatures: [(index: Int, signature: AnySignature)],
         totalKeys _: Int
@@ -76,6 +88,37 @@ public struct MultiKeySignature: Sendable, Equatable {
             signatures: sorted.map(\.signature),
             bitmap: Data(bitmapBytes)
         )
+    }
+
+    /// Creates a MultiKeySignature from signatures and their key indices with validation.
+    public static func validatedFromSignaturesWithIndices(
+        signatures: [(index: Int, signature: AnySignature)],
+        totalKeys: Int
+    ) throws -> Self {
+        guard totalKeys > 0 else {
+            throw AptosError.multiSignature(.invalidThreshold(
+                message: "totalKeys must be greater than zero"
+            ))
+        }
+        guard totalKeys <= MultiKey.maxKeys else {
+            throw AptosError.multiSignature(.tooManyKeys(
+                count: totalKeys, maximum: MultiKey.maxKeys
+            ))
+        }
+
+        var seen = Set<Int>()
+        for entry in signatures {
+            guard entry.index >= 0, entry.index < totalKeys else {
+                throw AptosError.multiSignature(.invalidSignerIndex(
+                    index: entry.index, totalKeys: totalKeys
+                ))
+            }
+            guard seen.insert(entry.index).inserted else {
+                throw AptosError.multiSignature(.duplicateSignerIndex(index: entry.index))
+            }
+        }
+
+        return fromSignaturesWithIndices(signatures: signatures, totalKeys: totalKeys)
     }
 }
 

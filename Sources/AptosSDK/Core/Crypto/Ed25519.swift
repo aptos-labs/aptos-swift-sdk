@@ -55,13 +55,15 @@ extension Ed25519PublicKey: BCSSerializable, BCSDeserializable {
 
 // MARK: - Ed25519PrivateKey
 
-/// Ed25519 private key (32 bytes).
+/// Ed25519 private key.
+///
+/// Stored internally as a 32-byte seed. Initialization also accepts the
+/// 64-byte extended format (`seed || public_key`) and normalizes it to seed form.
 ///
 /// Conforms to `CustomStringConvertible` and `CustomDebugStringConvertible`
 /// with redacted output to prevent accidental logging of key material.
 public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
-    CustomDebugStringConvertible
-{
+    CustomDebugStringConvertible {
     public private(set) var data: Data
 
     public static let length = 32
@@ -72,12 +74,40 @@ public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
         return Self(unchecked: Data(key.rawRepresentation))
     }
 
-    /// Creates from raw bytes (32-byte seed).
+    /// Creates from raw bytes (32-byte seed or 64-byte extended key).
     public init(data: Data) throws {
-        guard data.count == Self.length else {
-            throw AptosError.crypto(.invalidKeyLength(expected: Self.length, actual: data.count))
+        guard data.count == Self.length || data.count == 64 else {
+            throw AptosError.crypto(.invalidPrivateKey(
+                "Invalid Ed25519 private key length: expected 32 or 64 bytes, got \(data.count)"
+            ))
         }
-        self.data = data
+
+        if data.count == Self.length {
+            self.data = data
+            return
+        }
+
+        // Extended key format: seed (32) || public_key (32)
+        let seed = Data(data.prefix(32))
+        let providedPublicKey = Data(data.suffix(32))
+
+        var derivedPublicKey = [UInt8](repeating: 0, count: 32)
+        var secretKey = [UInt8](repeating: 0, count: 64)
+        defer {
+            for i in secretKey.indices {
+                secretKey[i] = 0
+            }
+        }
+        crypto_sign_ed25519_seed_keypair(&derivedPublicKey, &secretKey, Array(seed))
+
+        guard Data(derivedPublicKey) == providedPublicKey else {
+            throw AptosError.crypto(.invalidPrivateKey(
+                "Extended Ed25519 private key contains mismatched public key bytes"
+            ))
+        }
+
+        // Internally store only the seed; public key is always derived.
+        self.data = seed
     }
 
     /// Creates from a hex string.
@@ -107,6 +137,11 @@ public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
     public func publicKey() throws -> Ed25519PublicKey {
         var pk = [UInt8](repeating: 0, count: 32)
         var sk = [UInt8](repeating: 0, count: 64)
+        defer {
+            for i in sk.indices {
+                sk[i] = 0
+            }
+        }
         let seed = Array(data)
         crypto_sign_ed25519_seed_keypair(&pk, &sk, seed)
         return try Ed25519PublicKey(data: Data(pk))
@@ -120,6 +155,11 @@ public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
         // Build the 64-byte secret key: seed || public_key
         var pk = [UInt8](repeating: 0, count: 32)
         var sk = [UInt8](repeating: 0, count: 64)
+        defer {
+            for i in sk.indices {
+                sk[i] = 0
+            }
+        }
         let seed = Array(data)
         crypto_sign_ed25519_seed_keypair(&pk, &sk, seed)
 
@@ -139,8 +179,13 @@ public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
         data = Data(repeating: 0, count: count)
     }
 
-    public var description: String { "Ed25519PrivateKey(<REDACTED>)" }
-    public var debugDescription: String { "Ed25519PrivateKey(<REDACTED>)" }
+    public var description: String {
+        "Ed25519PrivateKey(<REDACTED>)"
+    }
+
+    public var debugDescription: String {
+        "Ed25519PrivateKey(<REDACTED>)"
+    }
 
     /// Internal init that skips validation (for generate).
     private init(unchecked data: Data) {

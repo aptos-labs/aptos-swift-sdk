@@ -70,8 +70,7 @@ extension Secp256r1PublicKey: BCSSerializable, BCSDeserializable {
 /// Conforms to `CustomStringConvertible` and `CustomDebugStringConvertible`
 /// with redacted output to prevent accidental logging of key material.
 public struct Secp256r1PrivateKey: Sendable, Equatable, CustomStringConvertible,
-    CustomDebugStringConvertible
-{
+    CustomDebugStringConvertible {
     public private(set) var data: Data
 
     public static let length = 32
@@ -135,8 +134,13 @@ public struct Secp256r1PrivateKey: Sendable, Equatable, CustomStringConvertible,
         data = Data(repeating: 0, count: count)
     }
 
-    public var description: String { "Secp256r1PrivateKey(<REDACTED>)" }
-    public var debugDescription: String { "Secp256r1PrivateKey(<REDACTED>)" }
+    public var description: String {
+        "Secp256r1PrivateKey(<REDACTED>)"
+    }
+
+    public var debugDescription: String {
+        "Secp256r1PrivateKey(<REDACTED>)"
+    }
 
     private init(unchecked data: Data) {
         self.data = data

@@ -13,8 +13,9 @@ import Foundation
 /// ```
 /// idCommitment = SHA3-256(pepper || uidKey || uidVal)
 /// keylessPublicKey = KeylessPublicKey(iss, idCommitment)
-/// anyPublicKey = AnyPublicKey.keyless(keylessPublicKey)
-/// authKey = SHA3-256(BCS(anyPublicKey) || signingScheme.singleKey)
+/// authKey = SHA3-256(
+///   SHA3-256(iss) || SHA3-256(aud) || SHA3-256(uidKey || uidVal) || pepper || 0x05
+/// )
 /// address = authKey
 /// ```
 public struct KeylessAccount: Sendable {
@@ -45,6 +46,9 @@ public struct KeylessAccount: Sendable {
     /// The UID value from the JWT.
     public let uidVal: String
 
+    /// The OIDC audience/client ID used for authentication key derivation.
+    public let audience: String
+
     /// Creates a keyless account from OIDC components.
     ///
     /// - Parameters:
@@ -55,6 +59,9 @@ public struct KeylessAccount: Sendable {
     ///   - pepper: The pepper from the pepper service (31 bytes)
     ///   - uidKey: The JWT claim key for the user ID (default: "sub")
     ///   - uidVal: The user ID value from the JWT
+    ///   - audience: Optional OIDC audience/client ID override (must be non-empty).
+    ///               If nil, reads from JWT `aud` claim.
+    ///               Throws if no audience can be resolved.
     ///   - proofExpiryDateSecs: Optional expiry for the proof
     ///   - address: Optional override address (for rotated accounts)
     public init(
@@ -65,15 +72,40 @@ public struct KeylessAccount: Sendable {
         pepper: Data,
         uidKey: String = "sub",
         uidVal: String,
+        audience: String? = nil,
         proofExpiryDateSecs: UInt64? = nil,
         address: AccountAddress? = nil
     ) throws {
+        guard pepper.count == 31 else {
+            throw AptosError.keyless(.invalidConfiguration(
+                "Keyless pepper must be exactly 31 bytes, got \(pepper.count)"
+            ))
+        }
+
+        let resolvedAudience: String
+        if let explicitAudience = audience {
+            guard !explicitAudience.isEmpty else {
+                throw AptosError.keyless(.invalidConfiguration(
+                    "Explicit audience override must not be empty"
+                ))
+            }
+            resolvedAudience = explicitAudience
+        } else {
+            guard let jwtAudience = Self.extractJWTAudience(jwt), !jwtAudience.isEmpty else {
+                throw AptosError.keyless(.invalidJWT(
+                    "JWT is missing 'aud' claim; provide audience explicitly via KeylessAccount initializer"
+                ))
+            }
+            resolvedAudience = jwtAudience
+        }
+
         self.ephemeralKeyPair = ephemeralKeyPair
         self.proof = proof
         self.jwt = jwt
         self.pepper = pepper
         self.uidKey = uidKey
         self.uidVal = uidVal
+        self.audience = resolvedAudience
         self.proofExpiryDateSecs = proofExpiryDateSecs
 
         // Compute identity commitment: SHA3-256(pepper || uidKey || uidVal)
@@ -88,8 +120,13 @@ public struct KeylessAccount: Sendable {
         if let address {
             accountAddress = address
         } else {
-            let anyPubKey = AnyPublicKey.keyless(keylessPublicKey)
-            let authKey = try AuthenticationKey.fromSingleKey(publicKey: anyPubKey)
+            let authKey = try AuthenticationKey.fromKeyless(
+                issuer: issuer,
+                audience: self.audience,
+                uidKey: uidKey,
+                uidVal: uidVal,
+                pepper: pepper
+            )
             accountAddress = authKey.accountAddress()
         }
     }
@@ -157,13 +194,36 @@ public struct KeylessAccount: Sendable {
         }
         return nil
     }
+
+    /// Extracts the `aud` claim from a JWT payload via base64url decoding.
+    private static func extractJWTAudience(_ jwt: String) -> String? {
+        let parts = jwt.split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+        var base64 = String(parts[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        while base64.count % 4 != 0 {
+            base64.append("=")
+        }
+        guard let data = Data(base64Encoded: base64) else { return nil }
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        if let aud = json["aud"] as? String {
+            return aud
+        }
+        if let audArray = json["aud"] as? [String], let first = audArray.first {
+            return first
+        }
+        return nil
+    }
 }
 
 // MARK: AptosAccount
 
 extension KeylessAccount: AptosAccount {
     public var signingScheme: SigningScheme {
-        .singleKey
+        .keyless
     }
 
     public var publicKeyBytes: Data {
@@ -174,6 +234,9 @@ extension KeylessAccount: AptosAccount {
     public func sign(message: Data) throws -> AnySignature {
         guard !ephemeralKeyPair.isExpired else {
             throw AptosError.keyless(.invalidConfiguration("Keyless account ephemeral key has expired"))
+        }
+        if isJWTExpired {
+            throw AptosError.keyless(.invalidJWT("JWT has expired"))
         }
         if isProofExpired {
             throw AptosError.keyless(.proofExpired("Proof has expired"))
@@ -195,7 +258,12 @@ extension KeylessAccount: AptosAccount {
     }
 
     public func authenticationKey() throws -> AuthenticationKey {
-        let anyPubKey = AnyPublicKey.keyless(keylessPublicKey)
-        return try AuthenticationKey.fromSingleKey(publicKey: anyPubKey)
+        try AuthenticationKey.fromKeyless(
+            issuer: keylessPublicKey.issuer,
+            audience: audience,
+            uidKey: uidKey,
+            uidVal: uidVal,
+            pepper: pepper
+        )
     }
 }

@@ -28,6 +28,18 @@ public enum Mnemonic {
         }
     }
 
+    /// Cached BIP-39 word set for O(1) validation lookups.
+    private static let wordSet = Set(BIP39Wordlist.words)
+
+    /// Cached BIP-39 word -> index map for mnemonic decoding.
+    private static let wordMap: [String: Int] = {
+        var map = [String: Int](minimumCapacity: BIP39Wordlist.words.count)
+        for (i, word) in BIP39Wordlist.words.enumerated() {
+            map[word] = i
+        }
+        return map
+    }()
+
     /// Generates a random BIP-39 mnemonic phrase.
     public static func generate(wordCount: WordCount = .twelve) -> String {
         let entropy = generateEntropy(byteCount: wordCount.entropyBytes)
@@ -42,8 +54,7 @@ public enum Mnemonic {
         guard [12, 15, 18, 21, 24].contains(words.count) else { return false }
 
         // Check all words are in the wordlist
-        let wordSet = Set(BIP39Wordlist.words)
-        guard words.allSatisfy({ wordSet.contains($0) }) else { return false }
+        guard words.allSatisfy({ Self.wordSet.contains($0) }) else { return false }
 
         // Reconstruct entropy and verify checksum
         guard let entropy = mnemonicToEntropy(words) else { return false }
@@ -79,8 +90,14 @@ public enum Mnemonic {
 
     private static func generateEntropy(byteCount: Int) -> Data {
         var entropy = Data(count: byteCount)
-        entropy.withUnsafeMutableBytes { buffer in
-            _ = SecRandomCopyBytes(kSecRandomDefault, byteCount, buffer.baseAddress!)
+        let status = entropy.withUnsafeMutableBytes { buffer -> Int32 in
+            guard let baseAddress = buffer.baseAddress else { return -1 }
+            return SecRandomCopyBytes(kSecRandomDefault, byteCount, baseAddress)
+        }
+        guard status == 0 else {
+            // Fall back to SystemRandomNumberGenerator instead of returning zeroed bytes.
+            var rng = SystemRandomNumberGenerator()
+            return Data((0 ..< byteCount).map { _ in UInt8.random(in: UInt8.min ... UInt8.max, using: &rng) })
         }
         return entropy
     }
@@ -117,18 +134,10 @@ public enum Mnemonic {
     }
 
     private static func mnemonicToEntropy(_ words: [String]) -> Data? {
-        let wordMap: [String: Int] = {
-            var map = [String: Int]()
-            for (i, w) in BIP39Wordlist.words.enumerated() {
-                map[w] = i
-            }
-            return map
-        }()
-
         // Convert words to 11-bit indices
         var bits: [Bool] = []
         for word in words {
-            guard let index = wordMap[word] else { return nil }
+            guard let index = Self.wordMap[word] else { return nil }
             for i in (0 ..< 11).reversed() {
                 bits.append((index >> i) & 1 == 1)
             }

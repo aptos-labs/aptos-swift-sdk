@@ -138,6 +138,31 @@ struct MultiSigVectorTests {
         }
     }
 
+    @Test("MultiKey signature rejects duplicate signer index")
+    func multiKeySignatureRejectsDuplicateSignerIndex() throws {
+        let sig = try Ed25519Signature(data: Data(repeating: 0, count: 64))
+        #expect(throws: AptosError.self) {
+            _ = try MultiKeySignature.validatedFromSignaturesWithIndices(
+                signatures: [
+                    (index: 0, signature: .ed25519(sig)),
+                    (index: 0, signature: .ed25519(sig)),
+                ],
+                totalKeys: 2
+            )
+        }
+    }
+
+    @Test("MultiKey signature rejects out-of-range signer index")
+    func multiKeySignatureRejectsOutOfRangeSignerIndex() throws {
+        let sig = try Ed25519Signature(data: Data(repeating: 0, count: 64))
+        #expect(throws: AptosError.self) {
+            _ = try MultiKeySignature.validatedFromSignaturesWithIndices(
+                signatures: [(index: 5, signature: .ed25519(sig))],
+                totalKeys: 2
+            )
+        }
+    }
+
     // MARK: - MultiKey
 
     @Test("MultiKey auth key derivation")
@@ -177,6 +202,7 @@ struct MultiSigVectorTests {
         #expect(SigningScheme.multiEd25519.rawValue == 1)
         #expect(SigningScheme.singleKey.rawValue == 2)
         #expect(SigningScheme.multiKey.rawValue == 3)
+        #expect(SigningScheme.keyless.rawValue == 5)
     }
 
     // MARK: - 1-of-1 Degenerate Case

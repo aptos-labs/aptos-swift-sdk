@@ -17,6 +17,7 @@ public enum AptosAPIType: String, Sendable {
 public actor AptosHTTPClient {
     private let config: AptosConfig
     private let session: URLSession
+    private let retryAfterDateFormatters: [DateFormatter]
 
     public init(config: AptosConfig) {
         self.config = config
@@ -26,6 +27,7 @@ public actor AptosHTTPClient {
             "User-Agent": AptosConstants.userAgent,
         ]
         session = URLSession(configuration: urlConfig)
+        retryAfterDateFormatters = Self.makeRetryAfterDateFormatters()
     }
 
     // MARK: - JSON Requests
@@ -167,21 +169,24 @@ public actor AptosHTTPClient {
         for attempt in 0 ... retryConfig.maxRetries {
             do {
                 let (data, response) = try await session.data(for: request)
-                try validateResponse(response, data: data)
-                let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
-                return try decoder.decode(T.self, from: data)
-            } catch let error as AptosError {
-                lastError = error
-                if attempt < retryConfig.maxRetries, isRetryable(error: error) {
-                    let delay = retryDelay(
-                        attempt: attempt, config: retryConfig,
-                        retryAfter: retryAfterValue(error: error)
-                    )
-                    try await Task.sleep(nanoseconds: delay)
-                    continue
+                let retryAfter = retryAfterMillis(from: response)
+                do {
+                    try validateResponse(response, data: data)
+                    let decoder = JSONDecoder()
+                    decoder.keyDecodingStrategy = .convertFromSnakeCase
+                    return try decoder.decode(T.self, from: data)
+                } catch let error as AptosError {
+                    lastError = error
+                    if attempt < retryConfig.maxRetries, isRetryable(error: error) {
+                        let delay = retryDelay(
+                            attempt: attempt, config: retryConfig,
+                            retryAfter: retryAfter
+                        )
+                        try await Task.sleep(nanoseconds: delay)
+                        continue
+                    }
+                    throw error
                 }
-                throw error
             } catch {
                 lastError = error
                 if attempt < retryConfig.maxRetries, isNetworkError(error) {
@@ -205,19 +210,22 @@ public actor AptosHTTPClient {
         for attempt in 0 ... retryConfig.maxRetries {
             do {
                 let (data, response) = try await session.data(for: request)
-                try validateResponse(response, data: data)
-                return data
-            } catch let error as AptosError {
-                lastError = error
-                if attempt < retryConfig.maxRetries, isRetryable(error: error) {
-                    let delay = retryDelay(
-                        attempt: attempt, config: retryConfig,
-                        retryAfter: retryAfterValue(error: error)
-                    )
-                    try await Task.sleep(nanoseconds: delay)
-                    continue
+                let retryAfter = retryAfterMillis(from: response)
+                do {
+                    try validateResponse(response, data: data)
+                    return data
+                } catch let error as AptosError {
+                    lastError = error
+                    if attempt < retryConfig.maxRetries, isRetryable(error: error) {
+                        let delay = retryDelay(
+                            attempt: attempt, config: retryConfig,
+                            retryAfter: retryAfter
+                        )
+                        try await Task.sleep(nanoseconds: delay)
+                        continue
+                    }
+                    throw error
                 }
-                throw error
             } catch {
                 lastError = error
                 if attempt < retryConfig.maxRetries, isNetworkError(error) {
@@ -253,9 +261,7 @@ public actor AptosHTTPClient {
             case 401:
                 throw AptosError.unauthorized(message)
             case 429:
-                let retryAfter = httpResponse.value(forHTTPHeaderField: "Retry-After")
-                let detail = retryAfter.map { "\(message) (retry-after: \($0)s)" } ?? message
-                throw AptosError.rateLimited(detail)
+                throw AptosError.rateLimited(message)
             case 500 ... 599:
                 throw AptosError.internalError(message)
             default:
@@ -284,22 +290,62 @@ public actor AptosHTTPClient {
         return nsError.domain == NSURLErrorDomain
     }
 
-    private func retryAfterValue(error: AptosError) -> UInt64? {
-        if case let .rateLimited(msg) = error,
-           let range = msg.range(of: "retry-after: "),
-           let endRange = msg[range.upperBound...].range(of: "s)") {
-            let seconds = msg[range.upperBound ..< endRange.lowerBound]
-            return UInt64(seconds).map { $0 * 1000 }
+    private func retryAfterMillis(from response: URLResponse) -> UInt64? {
+        guard let httpResponse = response as? HTTPURLResponse else { return nil }
+        guard let headerValue = httpResponse.value(forHTTPHeaderField: "Retry-After") else { return nil }
+
+        let trimmed = headerValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let seconds = Double(trimmed), seconds >= 0 {
+            return clampedRetryAfterMillis(seconds: seconds)
         }
+
+        for formatter in retryAfterDateFormatters {
+            if let date = formatter.date(from: trimmed) {
+                let secondsUntilRetry = max(0, date.timeIntervalSinceNow)
+                return clampedRetryAfterMillis(seconds: secondsUntilRetry)
+            }
+        }
+
         return nil
     }
 
     private func retryDelay(attempt: Int, config: RetryConfig, retryAfter: UInt64? = nil) -> UInt64 {
         if let retryAfter {
-            return retryAfter * 1_000_000 // ms to ns
+            let cappedRetryAfter = min(retryAfter, config.maxDelayMs)
+            return cappedRetryAfter * 1_000_000 // ms to ns
         }
-        let delayMs = Double(config.initialBackoffMs) * pow(config.backoffMultiplier, Double(attempt))
-        return UInt64(delayMs) * 1_000_000 // ms to ns
+        let computedMs = Double(config.initialBackoffMs) * pow(config.backoffMultiplier, Double(attempt))
+        let cappedMs = min(computedMs, Double(config.maxDelayMs))
+        return UInt64(cappedMs) * 1_000_000 // ms to ns
+    }
+
+    private func clampedRetryAfterMillis(seconds: Double) -> UInt64? {
+        guard seconds.isFinite, seconds >= 0 else { return nil }
+        let millis = seconds * 1000
+        guard millis.isFinite, millis >= 0 else { return nil }
+        let maxDelayMs = config.retryConfig.maxDelayMs
+        let maxMillisAsDouble = min(Double(maxDelayMs), Double(UInt64.max))
+        let cappedMillis = min(millis, maxMillisAsDouble)
+        if cappedMillis >= Double(UInt64.max) {
+            return UInt64.max
+        }
+        let truncatedMillis = UInt64(cappedMillis.rounded(FloatingPointRoundingRule.down))
+        return min(truncatedMillis, maxDelayMs)
+    }
+
+    private static func makeRetryAfterDateFormatters() -> [DateFormatter] {
+        let formats = [
+            "EEE',' dd MMM yyyy HH':'mm':'ss zzz", // IMF-fixdate
+            "EEEE',' dd-MMM-yy HH':'mm':'ss zzz", // obsolete RFC 850
+            "EEE MMM d HH':'mm':'ss yyyy", // ANSI C's asctime()
+        ]
+        return formats.map { format in
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            formatter.dateFormat = format
+            return formatter
+        }
     }
 }
 

@@ -80,19 +80,38 @@ extension Secp256k1PublicKey: BCSSerializable, BCSDeserializable {
 /// Conforms to `CustomStringConvertible` and `CustomDebugStringConvertible`
 /// with redacted output to prevent accidental logging of key material.
 public struct Secp256k1PrivateKey: Sendable, Equatable, CustomStringConvertible,
-    CustomDebugStringConvertible
-{
+    CustomDebugStringConvertible {
     public private(set) var data: Data
 
     public static let length = 32
 
     /// Generates a new random private key.
-    public static func generate() -> Self {
-        // P256K key generation is guaranteed to succeed with random entropy
-        guard let key = try? P256K.Signing.PrivateKey() else {
-            fatalError("Failed to generate secp256k1 key - system entropy unavailable")
+    ///
+    /// Throws if key generation fails after a bounded number of attempts.
+    public static func generate() throws -> Self {
+        try generateOrThrow(maxAttempts: 1000)
+    }
+
+    /// Generates a new random private key with bounded attempts.
+    ///
+    /// Use this API when callers need recoverable failure handling.
+    public static func generateOrThrow(maxAttempts: Int = 1000) throws -> Self {
+        guard maxAttempts > 0 else {
+            throw AptosError.invalidArgument("maxAttempts must be greater than zero")
         }
-        return Self(unchecked: Data(key.dataRepresentation))
+
+        if let key = try? P256K.Signing.PrivateKey() {
+            return Self(unchecked: Data(key.dataRepresentation))
+        }
+
+        // Fallback path: sample random 32-byte candidates until one is a valid scalar.
+        var rng = SystemRandomNumberGenerator()
+        guard let candidate = randomValidCandidate(using: &rng, maxAttempts: maxAttempts) else {
+            throw AptosError.crypto(.invalidPrivateKey(
+                "Failed to generate a valid secp256k1 private key after \(maxAttempts) attempts"
+            ))
+        }
+        return Self(unchecked: candidate)
     }
 
     /// Creates from raw bytes.
@@ -150,11 +169,33 @@ public struct Secp256k1PrivateKey: Sendable, Equatable, CustomStringConvertible,
         data = Data(repeating: 0, count: count)
     }
 
-    public var description: String { "Secp256k1PrivateKey(<REDACTED>)" }
-    public var debugDescription: String { "Secp256k1PrivateKey(<REDACTED>)" }
+    public var description: String {
+        "Secp256k1PrivateKey(<REDACTED>)"
+    }
+
+    public var debugDescription: String {
+        "Secp256k1PrivateKey(<REDACTED>)"
+    }
 
     private init(unchecked data: Data) {
         self.data = data
+    }
+
+    private static func randomValidCandidate(
+        using rng: inout SystemRandomNumberGenerator,
+        maxAttempts: Int
+    ) -> Data? {
+        var attempts = 0
+        while attempts < maxAttempts {
+            let candidate = Data((0 ..< Self.length).map { _ in
+                UInt8.random(in: UInt8.min ... UInt8.max, using: &rng)
+            })
+            if (try? P256K.Signing.PrivateKey(dataRepresentation: candidate)) != nil {
+                return candidate
+            }
+            attempts += 1
+        }
+        return nil
     }
 }
 

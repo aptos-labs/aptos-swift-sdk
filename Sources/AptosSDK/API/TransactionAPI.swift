@@ -95,6 +95,11 @@ public struct TransactionAPI: Sendable {
         signer: any AptosAccount,
         transaction: SimpleTransaction
     ) async throws -> PendingTransactionResponse {
+        if transaction.feePayerAddress != nil {
+            throw AptosError.transaction(.invalidAuthenticator(
+                "signAndSubmit does not support fee-payer transactions; sign with FeePayerUtils.signFeePayerTransaction, then submit the signed transaction via TransactionAPI.submit (or submit-and-wait equivalent)."
+            ))
+        }
         let auth = try TransactionSigner.sign(
             transaction: .simple(transaction), signer: signer
         )
@@ -219,19 +224,7 @@ public struct TransactionAPI: Sendable {
 
         let rawTxn = transaction.rawTransaction
 
-        let accountAuth: AccountAuthenticator
-        if let pubKey = signerPublicKey as? AnyPublicKey {
-            let zeroSig = try Ed25519Signature(data: Data(repeating: 0, count: 64))
-            accountAuth = .singleKey(
-                publicKey: pubKey,
-                signature: .ed25519(zeroSig)
-            )
-        } else if let pubKey = signerPublicKey as? Ed25519PublicKey {
-            let zeroSig = try Ed25519Signature(data: Data(repeating: 0, count: 64))
-            accountAuth = .ed25519(publicKey: pubKey, signature: zeroSig)
-        } else {
-            accountAuth = .noAccountAuthenticator
-        }
+        let accountAuth = try simulationAuthenticator(for: signerPublicKey)
 
         let auth = TransactionAuthenticator.singleSender(accountAuth)
         let signedTxn = SignedTransaction(rawTransaction: rawTxn, authenticator: auth)
@@ -261,6 +254,58 @@ public struct TransactionAPI: Sendable {
         }
         // Apply 1.5x safety margin
         return gasUsed + (gasUsed / 2)
+    }
+
+    // MARK: - Simulation Helpers
+
+    private func simulationAuthenticator(for signerPublicKey: (any BCSSerializable)?) throws -> AccountAuthenticator {
+        if let pubKey = signerPublicKey as? AnyPublicKey {
+            return .singleKey(
+                publicKey: pubKey,
+                signature: try zeroAnySignature(for: pubKey)
+            )
+        }
+        if let pubKey = signerPublicKey as? Ed25519PublicKey {
+            let zeroSig = try Ed25519Signature(data: Data(repeating: 0, count: Ed25519Signature.length))
+            return .ed25519(publicKey: pubKey, signature: zeroSig)
+        }
+        if let pubKey = signerPublicKey as? Secp256k1PublicKey {
+            let zeroSig = try Secp256k1Signature(data: Data(repeating: 0, count: Secp256k1Signature.length))
+            return .singleKey(publicKey: .secp256k1(pubKey), signature: .secp256k1(zeroSig))
+        }
+        if let pubKey = signerPublicKey as? Secp256r1PublicKey {
+            let zeroSig = try Secp256r1Signature(data: Data(repeating: 0, count: Secp256r1Signature.length))
+            let webAuthnSig = WebAuthnSignature(
+                signature: zeroSig,
+                authenticatorData: Data(),
+                clientDataJSON: Data()
+            )
+            return .singleKey(publicKey: .secp256r1(pubKey), signature: .webAuthn(webAuthnSig))
+        }
+        if let pubKey = signerPublicKey as? KeylessPublicKey {
+            return .singleKey(publicKey: .keyless(pubKey), signature: .keyless(KeylessSignature(data: Data())))
+        }
+        return .noAccountAuthenticator
+    }
+
+    private func zeroAnySignature(for publicKey: AnyPublicKey) throws -> AnySignature {
+        switch publicKey {
+        case .ed25519:
+            let zeroSig = try Ed25519Signature(data: Data(repeating: 0, count: Ed25519Signature.length))
+            return .ed25519(zeroSig)
+        case .secp256k1:
+            let zeroSig = try Secp256k1Signature(data: Data(repeating: 0, count: Secp256k1Signature.length))
+            return .secp256k1(zeroSig)
+        case .secp256r1:
+            let zeroSig = try Secp256r1Signature(data: Data(repeating: 0, count: Secp256r1Signature.length))
+            return .webAuthn(WebAuthnSignature(
+                signature: zeroSig,
+                authenticatorData: Data(),
+                clientDataJSON: Data()
+            ))
+        case .keyless:
+            return .keyless(KeylessSignature(data: Data()))
+        }
     }
 }
 

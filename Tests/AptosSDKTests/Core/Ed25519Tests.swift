@@ -47,6 +47,28 @@ struct Ed25519Tests {
         #expect(restored.data == privKey.data)
     }
 
+    @Test("From 64-byte extended hex key")
+    func extendedHexKey() throws {
+        let privKey = Ed25519PrivateKey.generate()
+        let pubKey = try privKey.publicKey()
+        var extended = Data(privKey.data)
+        extended.append(pubKey.data)
+
+        let restored = try Ed25519PrivateKey.fromHex(Hex.encode(extended))
+        #expect(restored.data == privKey.data)
+    }
+
+    @Test("Reject 64-byte extended key with mismatched public key")
+    func rejectMismatchedExtendedHexKey() throws {
+        let privKey = Ed25519PrivateKey.generate()
+        var extended = Data(privKey.data)
+        extended.append(Data(repeating: 0xFF, count: 32))
+
+        #expect(throws: AptosError.self) {
+            _ = try Ed25519PrivateKey.fromHex(Hex.encode(extended))
+        }
+    }
+
     @Test("AIP-80 format")
     func aip80Format() throws {
         let privKey = Ed25519PrivateKey.generate()

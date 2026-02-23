@@ -139,4 +139,37 @@ struct FeePayerTests {
             )
         }
     }
+
+    @Test("Mismatched fee payer account/address throws")
+    func mismatchedFeePayerAccountAddress() throws {
+        let sender = try Ed25519Account.generate()
+        let expectedFeePayer = try Ed25519Account.generate()
+        let wrongFeePayer = try Ed25519Account.generate()
+
+        let raw = RawTransaction(
+            sender: sender.accountAddress,
+            sequenceNumber: 0,
+            payload: .entryFunction(EntryFunction(
+                moduleId: MoveModuleId(address: .one, name: "test"),
+                functionName: "test"
+            )),
+            maxGasAmount: 200_000,
+            gasUnitPrice: 100,
+            expirationTimestampSecs: 1_000_000,
+            chainId: .testnet
+        )
+
+        let txn = FeePayerUtils.buildFeePayerTransaction(
+            rawTransaction: raw,
+            feePayerAddress: expectedFeePayer.accountAddress
+        )
+
+        #expect(throws: AptosError.self) {
+            try FeePayerUtils.signFeePayerTransaction(
+                transaction: txn,
+                sender: sender,
+                feePayer: wrongFeePayer
+            )
+        }
+    }
 }

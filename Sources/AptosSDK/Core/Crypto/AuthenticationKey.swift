@@ -114,11 +114,19 @@ public struct AuthenticationKey: Sendable, Equatable, Hashable {
 // MARK: - SigningScheme
 
 /// The signing schemes supported by the Aptos blockchain.
+///
+/// The raw value is the single-byte suffix appended to the public key bytes
+/// before hashing to derive the authentication key.
 public enum SigningScheme: UInt8, Sendable {
+    /// Legacy Ed25519 scheme (0). Compatible with all Aptos wallets.
     case ed25519 = 0
+    /// Legacy multi-Ed25519 M-of-N scheme (1).
     case multiEd25519 = 1
+    /// Unified single-key scheme (2). Supports Ed25519, Secp256k1, and Secp256r1.
     case singleKey = 2
+    /// Multi-key scheme (3). Supports mixed key types with M-of-N threshold.
     case multiKey = 3
+    /// Keyless scheme (5). Used for OIDC-based keyless authentication.
     case keyless = 5
 }
 
@@ -126,7 +134,10 @@ public enum SigningScheme: UInt8, Sendable {
 
 /// Input enum for specifying which key scheme to use when generating accounts.
 public enum SigningSchemeInput: Sendable {
+    /// Ed25519 elliptic curve (recommended default).
     case ed25519
+    /// Secp256k1 ECDSA (Bitcoin-compatible).
     case secp256k1Ecdsa
+    /// Secp256r1/P-256 ECDSA (WebAuthn/passkey compatible).
     case secp256r1Ecdsa
 }

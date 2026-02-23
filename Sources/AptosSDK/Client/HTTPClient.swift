@@ -2,18 +2,30 @@ import Foundation
 
 // MARK: - AptosAPIType
 
-/// API type for routing requests.
+/// API type for routing requests to the appropriate service endpoint.
+///
+/// Each type maps to a different base URL (resolved via ``AptosConfig``) and may
+/// use different authentication headers.
 public enum AptosAPIType: String, Sendable {
+    /// Full node REST API for on-chain reads and transaction submission.
     case fullnode = "Fullnode"
+    /// GraphQL indexer API for rich queries over historical and aggregated data.
     case indexer = "Indexer"
+    /// Faucet service for funding accounts on test networks.
     case faucet = "Faucet"
+    /// Pepper service for keyless authentication.
     case pepper = "Pepper"
+    /// Prover service for keyless zero-knowledge proof generation.
     case prover = "Prover"
 }
 
 // MARK: - AptosHTTPClient
 
 /// Actor-based HTTP client for Aptos API requests.
+///
+/// Handles JSON/BCS request encoding, response decoding, authentication headers,
+/// and automatic retry with exponential backoff for transient failures (HTTP 429, 5xx, network errors).
+/// Thread-safe by construction via Swift's actor model.
 public actor AptosHTTPClient {
     private let config: AptosConfig
     private let session: URLSession
@@ -33,6 +45,13 @@ public actor AptosHTTPClient {
     // MARK: - JSON Requests
 
     /// Performs a GET request and decodes the JSON response.
+    ///
+    /// - Parameters:
+    ///   - url: The base URL (e.g., fullnode or indexer URL).
+    ///   - path: Path segment appended to the URL.
+    ///   - params: Query parameters appended as URL query items.
+    ///   - apiType: The API type, used for header selection and routing.
+    /// - Returns: The decoded response of type `T`.
     public func get<T: Decodable & Sendable>(
         url: String,
         path: String = "",
@@ -47,6 +66,13 @@ public actor AptosHTTPClient {
     }
 
     /// Performs a POST request with a JSON body and decodes the response.
+    ///
+    /// - Parameters:
+    ///   - url: The base URL.
+    ///   - path: Path segment appended to the URL.
+    ///   - body: The request body, encoded as JSON.
+    ///   - apiType: The API type, used for header selection and routing.
+    /// - Returns: The decoded response of type `T`.
     public func post<T: Decodable & Sendable>(
         url: String,
         path: String = "",
@@ -62,7 +88,15 @@ public actor AptosHTTPClient {
         return try await executeWithRetry(request)
     }
 
-    /// Performs a POST request with raw BCS bytes.
+    /// Performs a POST request with raw BCS bytes, decoding the JSON response.
+    ///
+    /// - Parameters:
+    ///   - url: The base URL.
+    ///   - path: Path segment appended to the URL.
+    ///   - body: BCS-encoded request body bytes.
+    ///   - contentType: MIME type for the request (defaults to signed transaction BCS).
+    ///   - apiType: The API type, used for header selection and routing.
+    /// - Returns: The decoded response of type `T`.
     public func postBCS<T: Decodable & Sendable>(
         url: String,
         path: String = "",
@@ -79,7 +113,7 @@ public actor AptosHTTPClient {
         return try await executeWithRetry(request)
     }
 
-    /// Performs a POST request with raw BCS bytes, returning raw Data.
+    /// Performs a POST request with raw BCS bytes, returning the response as raw `Data`.
     public func postBCSRaw(
         url: String,
         path: String = "",

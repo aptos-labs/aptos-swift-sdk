@@ -2,7 +2,9 @@ import Foundation
 
 // MARK: - TransactionPayload
 
-/// Transaction payload types.
+/// Transaction payload types supported by the Aptos blockchain.
+///
+/// Each variant corresponds to a BCS enum variant index used during serialization.
 public enum TransactionPayload: Sendable, Equatable {
     /// Script payload (variant 0).
     case script(Script)
@@ -50,10 +52,20 @@ extension TransactionPayload: BCSSerializable, BCSDeserializable {
 // MARK: - EntryFunction
 
 /// An entry function call payload.
+///
+/// Represents a call to a Move module's entry function on-chain. Each argument
+/// must be independently BCS-serialized before being placed into `args`.
 public struct EntryFunction: Sendable, Equatable {
+    /// The Move module containing the function (e.g., `0x1::aptos_account`).
     public let moduleId: MoveModuleId
+
+    /// The name of the entry function to invoke.
     public let functionName: String
+
+    /// Type arguments for generic functions (e.g., coin type for `transfer_coins`).
     public let typeArgs: [TypeTag]
+
+    /// BCS-encoded arguments, one `Data` per function parameter.
     public let args: [Data]
 
     public init(moduleId: MoveModuleId, functionName: String, typeArgs: [TypeTag] = [], args: [Data] = []) {
@@ -123,10 +135,15 @@ extension EntryFunction: BCSSerializable, BCSDeserializable {
 
 // MARK: - Script
 
-/// A script payload with bytecode.
+/// A script payload containing compiled Move bytecode to execute directly.
 public struct Script: Sendable, Equatable {
+    /// The compiled Move script bytecode.
     public let code: Data
+
+    /// Type arguments for the script's generic parameters.
     public let typeArgs: [TypeTag]
+
+    /// Typed arguments passed to the script.
     public let args: [ScriptArgument]
 
     public init(code: Data, typeArgs: [TypeTag] = [], args: [ScriptArgument] = []) {
@@ -162,7 +179,7 @@ extension Script: BCSSerializable, BCSDeserializable {
 
 // MARK: - ScriptArgument
 
-/// Script function argument.
+/// A typed argument for a Move script, serialized with a variant tag identifying the type.
 public enum ScriptArgument: Sendable, Equatable {
     case u8(UInt8)
     case u64(UInt64)
@@ -227,9 +244,12 @@ extension ScriptArgument: BCSSerializable, BCSDeserializable {
 
 // MARK: - MultisigPayload
 
-/// A multisig transaction payload.
+/// A multisig transaction payload targeting an on-chain multisig account.
 public struct MultisigPayload: Sendable, Equatable {
+    /// The address of the on-chain multisig account.
     public let multisigAddress: AccountAddress
+
+    /// The entry function to execute, or `nil` for approval/rejection-only transactions.
     public let entryFunction: EntryFunction?
 
     public init(multisigAddress: AccountAddress, entryFunction: EntryFunction? = nil) {

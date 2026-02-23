@@ -1,6 +1,6 @@
 import Foundation
 
-/// General blockchain queries.
+/// General blockchain queries (ledger info, gas estimation, block lookups).
 public struct GeneralAPI: Sendable {
     private let config: AptosConfig
     private let client: AptosHTTPClient

@@ -1,6 +1,9 @@
 import Foundation
 
 /// View function (read-only Move function) execution.
+///
+/// View functions run on the full node without creating a transaction and return
+/// the result directly. Useful for reading on-chain state like balances, resource data, etc.
 public struct ViewAPI: Sendable {
     private let config: AptosConfig
     private let client: AptosHTTPClient
@@ -11,6 +14,12 @@ public struct ViewAPI: Sendable {
     }
 
     /// Executes a view function and returns the result.
+    ///
+    /// - Parameters:
+    ///   - function: Fully qualified function name (e.g., `"0x1::coin::balance"`).
+    ///   - typeArguments: Move type arguments as strings (e.g., `["0x1::aptos_coin::AptosCoin"]`).
+    ///   - arguments: Function arguments matching the view function's parameter types.
+    /// - Returns: An array of decoded return values.
     public func view(
         function: String,
         typeArguments: [String] = [],

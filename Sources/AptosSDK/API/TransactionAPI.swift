@@ -311,13 +311,27 @@ public struct TransactionAPI: Sendable {
 
 // MARK: - TransactionOptions
 
-/// Options for transaction building.
+/// Options for overriding default transaction parameters during building.
+///
+/// All fields are optional; when `nil`, the SDK fetches or computes appropriate defaults
+/// (e.g., sequence number from the chain, gas price from the estimator).
 public struct TransactionOptions: Sendable {
+    /// Override for the maximum gas units. Defaults to ``AptosConstants/defaultMaxGasAmount``.
     public let maxGasAmount: UInt64?
+
+    /// Override for the gas unit price in octas. Defaults to the on-chain gas estimate.
     public let gasUnitPrice: UInt64?
+
+    /// Override for the transaction expiration (Unix timestamp in seconds).
     public let expirationTimestampSecs: UInt64?
+
+    /// Override for the sender's sequence number. Defaults to the current on-chain value.
     public let sequenceNumber: UInt64?
+
+    /// Override for the chain ID. Defaults to the network preset or on-chain value.
     public let chainId: ChainId?
+
+    /// Fee payer address for sponsored transactions. When set, the transaction uses fee-payer signing.
     public let feePayerAddress: AccountAddress?
 
     public init(

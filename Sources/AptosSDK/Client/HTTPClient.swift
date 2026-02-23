@@ -323,13 +323,14 @@ public actor AptosHTTPClient {
         guard seconds.isFinite, seconds >= 0 else { return nil }
         let millis = seconds * 1000
         guard millis.isFinite, millis >= 0 else { return nil }
-        let maxMillisAsDouble = min(Double(config.maxDelayMs), Double(UInt64.max))
+        let maxDelayMs = config.retryConfig.maxDelayMs
+        let maxMillisAsDouble = min(Double(maxDelayMs), Double(UInt64.max))
         let cappedMillis = min(millis, maxMillisAsDouble)
         if cappedMillis >= Double(UInt64.max) {
             return UInt64.max
         }
-        let truncatedMillis = UInt64(cappedMillis.rounded(.down))
-        return min(truncatedMillis, config.maxDelayMs)
+        let truncatedMillis = UInt64(cappedMillis.rounded(FloatingPointRoundingRule.down))
+        return min(truncatedMillis, maxDelayMs)
     }
 
     private static func makeRetryAfterDateFormatters() -> [DateFormatter] {

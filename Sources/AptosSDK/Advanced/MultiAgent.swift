@@ -51,6 +51,16 @@ public enum MultiAgentUtils {
                 "secondarySigners count (\(secondarySigners.count)) must match secondarySignerAddresses count (\(transaction.secondarySignerAddresses.count))"
             ))
         }
+        for (index, (signer, expectedAddress)) in zip(
+            secondarySigners,
+            transaction.secondarySignerAddresses
+        ).enumerated() {
+            if signer.accountAddress != expectedAddress {
+                throw AptosError.transaction(.invalidAuthenticator(
+                    "secondarySigners[\(index)].accountAddress does not match transaction.secondarySignerAddresses[\(index)]"
+                ))
+            }
+        }
         if transaction.feePayerAddress != nil, feePayer == nil {
             throw AptosError.transaction(.invalidAuthenticator(
                 "Transaction includes feePayerAddress but no feePayer account was provided"

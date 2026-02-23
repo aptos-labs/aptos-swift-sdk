@@ -32,23 +32,23 @@ struct PrivateKeySecurityTests {
     // MARK: - Secp256k1 Log Safety
 
     @Test("Secp256k1PrivateKey description is redacted")
-    func secp256k1Description() {
-        let key = Secp256k1PrivateKey.generate()
+    func secp256k1Description() throws {
+        let key = try Secp256k1PrivateKey.generate()
         let desc = String(describing: key)
         #expect(desc.contains("REDACTED"))
         #expect(!desc.contains(Hex.encodeWithoutPrefix(key.data)))
     }
 
     @Test("Secp256k1PrivateKey debugDescription is redacted")
-    func secp256k1DebugDescription() {
-        let key = Secp256k1PrivateKey.generate()
+    func secp256k1DebugDescription() throws {
+        let key = try Secp256k1PrivateKey.generate()
         let desc = String(reflecting: key)
         #expect(desc.contains("REDACTED"))
     }
 
     @Test("Secp256k1PrivateKey zeroize clears data")
-    func secp256k1Zeroize() {
-        var key = Secp256k1PrivateKey.generate()
+    func secp256k1Zeroize() throws {
+        var key = try Secp256k1PrivateKey.generate()
         #expect(key.data != Data(repeating: 0, count: 32))
         key.zeroize()
         #expect(key.data == Data(repeating: 0, count: 32))

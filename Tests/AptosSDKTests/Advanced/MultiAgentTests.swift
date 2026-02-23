@@ -230,6 +230,38 @@ struct MultiAgentTests {
         }
     }
 
+    @Test("Multi-agent signing validates secondary signer addresses")
+    func multiAgentSignerAddressValidation() throws {
+        let sender = try Ed25519Account.generate()
+        let secondarySigner = try Ed25519Account.generate()
+        let wrongSecondaryAddress = try AccountAddress.fromHex("0x2")
+        let raw = RawTransaction(
+            sender: sender.accountAddress,
+            sequenceNumber: 0,
+            payload: .entryFunction(EntryFunction(
+                moduleId: MoveModuleId(address: .one, name: "test"),
+                functionName: "test"
+            )),
+            maxGasAmount: 200_000,
+            gasUnitPrice: 100,
+            expirationTimestampSecs: 1_000_000,
+            chainId: .testnet
+        )
+
+        let tx = MultiAgentUtils.buildMultiAgentTransaction(
+            rawTransaction: raw,
+            secondarySignerAddresses: [wrongSecondaryAddress]
+        )
+
+        #expect(throws: AptosError.self) {
+            _ = try MultiAgentUtils.signMultiAgentTransaction(
+                transaction: tx,
+                sender: sender,
+                secondarySigners: [secondarySigner]
+            )
+        }
+    }
+
     @Test("Multi-agent fee payer address requires fee payer signer")
     func multiAgentFeePayerRequiresSigner() throws {
         let sender = try Ed25519Account.generate()

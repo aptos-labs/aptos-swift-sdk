@@ -86,15 +86,10 @@ public struct Secp256k1PrivateKey: Sendable, Equatable, CustomStringConvertible,
     public static let length = 32
 
     /// Generates a new random private key.
-    public static func generate() -> Self {
-        if let key = try? generateOrThrow(maxAttempts: 1000) {
-            return key
-        }
-
-        preconditionFailure(
-            "Failed to generate a valid secp256k1 private key in generate(). " +
-                "Use generateOrThrow(maxAttempts:) to handle this failure recoverably."
-        )
+    ///
+    /// Throws if key generation fails after a bounded number of attempts.
+    public static func generate() throws -> Self {
+        try generateOrThrow(maxAttempts: 1000)
     }
 
     /// Generates a new random private key with bounded attempts.

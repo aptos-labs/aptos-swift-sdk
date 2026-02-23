@@ -3,6 +3,18 @@ import Foundation
 // MARK: - TransactionBuilder
 
 /// Fluent builder for constructing raw transactions.
+///
+/// Uses an immutable copy-on-write pattern: each setter returns a new builder with the
+/// modified field, leaving the original unchanged.
+///
+/// ```swift
+/// let raw = try TransactionBuilder()
+///     .sender(account.accountAddress)
+///     .sequenceNumber(0)
+///     .payload(.entryFunction(entryFunc))
+///     .chainId(.testnet)
+///     .build()
+/// ```
 public struct TransactionBuilder: Sendable {
     private var sender: AccountAddress?
     private var sequenceNumber: UInt64?
@@ -96,8 +108,15 @@ public struct TransactionBuilder: Sendable {
 // MARK: - SimpleTransaction
 
 /// A simple (single-signer) transaction wrapper.
+///
+/// Optionally holds a fee payer address for sponsored transactions. When a fee payer
+/// is set, the signing message uses the ``RawTransactionWithData/feePayer`` domain prefix
+/// instead of the standard ``RawTransaction`` prefix.
 public struct SimpleTransaction: Sendable, Equatable {
+    /// The underlying raw transaction.
     public let rawTransaction: RawTransaction
+
+    /// The address of the fee payer, or `nil` for standard (non-sponsored) transactions.
     public let feePayerAddress: AccountAddress?
 
     public init(rawTransaction: RawTransaction, feePayerAddress: AccountAddress? = nil) {
@@ -122,9 +141,17 @@ public struct SimpleTransaction: Sendable, Equatable {
 // MARK: - MultiAgentTransaction
 
 /// A multi-agent transaction wrapper.
+///
+/// Multi-agent transactions require signatures from the primary sender plus one or more
+/// secondary signers. Optionally includes a fee payer for sponsored execution.
 public struct MultiAgentTransaction: Sendable, Equatable {
+    /// The underlying raw transaction from the primary sender.
     public let rawTransaction: RawTransaction
+
+    /// Addresses of all secondary signers, in the order they must sign.
     public let secondarySignerAddresses: [AccountAddress]
+
+    /// The address of the fee payer, or `nil` for standard multi-agent transactions.
     public let feePayerAddress: AccountAddress?
 
     public init(
@@ -157,7 +184,10 @@ public struct MultiAgentTransaction: Sendable, Equatable {
 
 // MARK: - AnyRawTransaction
 
-/// Type-erasing wrapper for any transaction type.
+/// Type-erasing wrapper for any transaction type (simple or multi-agent).
+///
+/// Used by ``TransactionSigner`` to sign transactions without specializing on the
+/// concrete transaction variant.
 public enum AnyRawTransaction: Sendable, Equatable {
     case simple(SimpleTransaction)
     case multiAgent(MultiAgentTransaction)

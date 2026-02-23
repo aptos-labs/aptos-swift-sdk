@@ -1,6 +1,9 @@
 import Foundation
 
-/// Actor-based LRU cache with time-to-live expiration.
+/// Actor-based LRU (Least Recently Used) cache with time-to-live expiration.
+///
+/// Thread-safe by construction via Swift's actor model. Entries are evicted in
+/// LRU order when the cache exceeds `maxSize`, and individually when their TTL expires.
 public actor LRUCache<Key: Hashable & Sendable, Value: Sendable> {
     private struct CacheEntry {
         var value: Value
@@ -16,6 +19,10 @@ public actor LRUCache<Key: Hashable & Sendable, Value: Sendable> {
     private let ttl: TimeInterval
 
     /// Creates a new LRU cache.
+    ///
+    /// - Parameters:
+    ///   - maxSize: Maximum number of entries before LRU eviction (must be > 0; clamped to 1 if invalid).
+    ///   - ttl: Time-to-live in seconds for each entry (must be >= 0; clamped to 0 if negative).
     public init(maxSize: Int = 100, ttl: TimeInterval = 300) {
         let effectiveMaxSize: Int
         if maxSize <= 0 {

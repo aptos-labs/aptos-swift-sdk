@@ -45,6 +45,7 @@ public enum AptosError: Error, Sendable, LocalizedError {
 
 // MARK: - ParseError
 
+/// Errors thrown when parsing strings into SDK types (hex, addresses, type tags, mnemonics, etc.).
 public enum ParseError: Error, Sendable, LocalizedError {
     case invalidHex(String)
     case invalidAddress(String)
@@ -71,6 +72,7 @@ public enum ParseError: Error, Sendable, LocalizedError {
 
 // MARK: - CryptoError
 
+/// Errors thrown by cryptographic operations (key generation, signing, verification, derivation).
 public enum CryptoError: Error, Sendable, LocalizedError {
     case invalidKeyLength(expected: Int, actual: Int)
     case invalidSignatureLength(expected: Int, actual: Int)
@@ -101,6 +103,7 @@ public enum CryptoError: Error, Sendable, LocalizedError {
 
 // MARK: - SerializationError
 
+/// Errors thrown during BCS serialization and deserialization (buffer overflows, depth limits, malformed data).
 public enum SerializationError: Error, Sendable, LocalizedError {
     case outOfRange(String)
     case bufferOverflow(String)
@@ -125,6 +128,7 @@ public enum SerializationError: Error, Sendable, LocalizedError {
 
 // MARK: - NetworkError
 
+/// Errors thrown by the HTTP networking layer (connection failures, timeouts, invalid URLs, HTTP errors).
 public enum NetworkError: Error, Sendable, LocalizedError {
     case connectionFailed(String)
     case timeout(String)
@@ -147,6 +151,7 @@ public enum NetworkError: Error, Sendable, LocalizedError {
 
 // MARK: - APIError
 
+/// Errors returned by the Aptos REST API, indexer, or faucet services.
 public enum APIError: Error, Sendable, LocalizedError {
     case aptosApiError(message: String, errorCode: String?, vmErrorCode: Int?)
     case indexerError(message: String, errors: [String])
@@ -170,6 +175,7 @@ public enum APIError: Error, Sendable, LocalizedError {
 
 // MARK: - TransactionError
 
+/// Errors thrown during transaction building, signing, submission, simulation, or execution.
 public enum TransactionError: Error, Sendable, LocalizedError {
     case buildFailed(String)
     case signFailed(String)
@@ -200,6 +206,7 @@ public enum TransactionError: Error, Sendable, LocalizedError {
 
 // MARK: - KeylessError
 
+/// Errors thrown by keyless (OIDC-based) authentication flows (JWT validation, pepper/prover services).
 public enum KeylessError: Error, Sendable, LocalizedError {
     case invalidJWT(String)
     case pepperServiceError(String)
@@ -222,6 +229,7 @@ public enum KeylessError: Error, Sendable, LocalizedError {
 
 // MARK: - MultiSignatureError
 
+/// Errors thrown during multi-signature operations (threshold validation, signer indices, key limits).
 public enum MultiSignatureError: Error, Sendable, LocalizedError {
     case invalidThreshold(message: String)
     case insufficientSignatures(required: Int, provided: Int)

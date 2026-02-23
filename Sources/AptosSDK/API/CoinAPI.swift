@@ -1,6 +1,9 @@
 import Foundation
 
-/// Coin (APT) transfer operations.
+/// Coin (APT) transfer and balance operations.
+///
+/// Provides convenience methods for the most common APT operations.
+/// For custom coin types, use ``TransactionAPI`` with an appropriate ``EntryFunction``.
 public struct CoinAPI: Sendable {
     private let config: AptosConfig
     private let client: AptosHTTPClient
@@ -15,6 +18,13 @@ public struct CoinAPI: Sendable {
     }
 
     /// Transfers APT from one account to another.
+    ///
+    /// - Parameters:
+    ///   - sender: The account sending APT (signs the transaction).
+    ///   - recipient: The destination account address.
+    ///   - amount: Amount to transfer in octas (1 APT = 100,000,000 octas).
+    ///   - options: Optional transaction configuration overrides.
+    /// - Returns: The confirmed transaction response from the blockchain.
     public func transferAPT(
         from sender: any AptosAccount,
         to recipient: AccountAddress,
@@ -29,7 +39,10 @@ public struct CoinAPI: Sendable {
         )
     }
 
-    /// Gets the APT balance for an account.
+    /// Gets the APT balance for an account in octas.
+    ///
+    /// - Parameter address: The account address to query.
+    /// - Returns: The balance in octas (1 APT = 100,000,000 octas).
     public func getBalance(_ address: AccountAddress) async throws -> UInt64 {
         try await viewAPI.getBalance(address)
     }

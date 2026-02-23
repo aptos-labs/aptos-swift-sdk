@@ -440,6 +440,8 @@ let (b, i) = try await (balance, info)
 - **BCS depth limits** — serialization/deserialization enforce a max nesting depth of 128 to prevent stack overflow from malicious inputs.
 - **Non-canonical ULEB128 rejection** — the BCS deserializer rejects non-canonical ULEB128 encodings (e.g., `0x80 0x00` for the value 0), preventing ambiguity attacks.
 
+See [SECURITY.md](SECURITY.md) for comprehensive security guidance including private key management, network security, and transaction safety best practices.
+
 ### Performance
 
 - **Deterministic Ed25519 via CTweetNaCl** — embedded C implementation provides RFC 8032 deterministic signing while CryptoKit handles verification with hardware acceleration.

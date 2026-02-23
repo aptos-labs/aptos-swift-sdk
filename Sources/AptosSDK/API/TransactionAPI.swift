@@ -97,7 +97,8 @@ public struct TransactionAPI: Sendable {
     ) async throws -> PendingTransactionResponse {
         if transaction.feePayerAddress != nil {
             throw AptosError.transaction(.invalidAuthenticator(
-                "signAndSubmit does not support fee-payer transactions; sign with FeePayerUtils.signFeePayerTransaction, then submit the signed transaction via TransactionAPI.submit (or submit-and-wait equivalent)."
+                "signAndSubmit does not support fee-payer transactions; "
+                    + "use FeePayerUtils.signFeePayerTransaction then submit via TransactionAPI.submit"
             ))
         }
         let auth = try TransactionSigner.sign(

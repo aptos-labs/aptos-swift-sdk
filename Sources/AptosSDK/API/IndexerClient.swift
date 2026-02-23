@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - IndexerClient
 
-/// Client for pre-built indexer (GraphQL) queries.
+/// Client for pre-built indexer (GraphQL) queries over historical and aggregated blockchain data.
 public struct IndexerClient: Sendable {
     private let config: AptosConfig
     private let client: AptosHTTPClient

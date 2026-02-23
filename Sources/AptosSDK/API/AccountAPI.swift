@@ -1,6 +1,6 @@
 import Foundation
 
-/// Account-related API operations.
+/// Account-related API operations (account data, resources, modules, sequence numbers).
 public struct AccountAPI: Sendable {
     private let config: AptosConfig
     private let client: AptosHTTPClient

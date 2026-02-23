@@ -74,7 +74,9 @@ public struct Ed25519PrivateKey: Sendable, Equatable, CustomStringConvertible,
     /// Creates from raw bytes (32-byte seed).
     public init(data: Data) throws {
         guard data.count == Self.length || data.count == 64 else {
-            throw AptosError.crypto(.invalidKeyLength(expected: Self.length, actual: data.count))
+            throw AptosError.crypto(.invalidPrivateKey(
+                "Invalid Ed25519 private key length: expected 32 or 64 bytes, got \(data.count)"
+            ))
         }
 
         if data.count == Self.length {

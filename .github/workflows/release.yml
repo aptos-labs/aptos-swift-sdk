@@ -45,7 +45,7 @@ jobs:
       - name: Verify tag matches SDK version
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          SDK_VERSION=$(grep -m1 'static let version' Sources/AptosSDK/Utils/Constants.swift | sed 's/.*"\(.*\)".*/\1/')
+          SDK_VERSION=$(awk -F'"' '/static[[:space:]]+let[[:space:]]+version[[:space:]]*=/ { print $2; exit }' Sources/AptosSDK/Utils/Constants.swift)
           if [ "$TAG" != "$SDK_VERSION" ]; then
             echo "::error::Tag ($TAG) does not match SDK version ($SDK_VERSION)"
             exit 1
@@ -66,7 +66,7 @@ jobs:
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
           DELIMITER="RELEASE_BODY_$(uuidgen)"
-          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | head -2 | tail -1)
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -2 | tail -1)
           if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "$TAG" ]; then
             echo "body<<${DELIMITER}" >> "$GITHUB_OUTPUT"
             echo "## Aptos Swift SDK $TAG" >> "$GITHUB_OUTPUT"

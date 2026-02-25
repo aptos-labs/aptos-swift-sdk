@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    name: Validate Release
+    runs-on: macos-15
+    strategy:
+      matrix:
+        xcode: ['16.0']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode ${{ matrix.xcode }}
+        run: sudo xcode-select -s /Applications/Xcode_${{ matrix.xcode }}.app
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Resolve dependencies
+        run: swift package resolve
+
+      - name: Build
+        run: swift build
+
+      - name: Build Release
+        run: swift build -c release
+
+      - name: Run tests
+        run: swift test
+
+      - name: Install SwiftFormat
+        run: brew install swiftformat
+
+      - name: Check formatting
+        run: swiftformat --lint Sources/ Tests/
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Lint
+        run: swiftlint lint Sources/ Tests/
+
+      - name: Verify tag matches SDK version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          SDK_VERSION=$(grep -m1 'static let version' Sources/AptosSDK/Utils/Constants.swift | sed 's/.*"\(.*\)".*/\1/')
+          if [ "$TAG" != "$SDK_VERSION" ]; then
+            echo "::error::Tag ($TAG) does not match SDK version ($SDK_VERSION)"
+            exit 1
+          fi
+          echo "Tag and SDK version match: $TAG"
+
+  release:
+    name: Create GitHub Release
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | head -2 | tail -1)
+          if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "$TAG" ]; then
+            echo "body<<EOF" >> "$GITHUB_OUTPUT"
+            echo "## Aptos Swift SDK $TAG" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "Initial release of the Aptos Swift SDK." >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "### Installation" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "Add to your \`Package.swift\`:" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo '```swift' >> "$GITHUB_OUTPUT"
+            echo "dependencies: [" >> "$GITHUB_OUTPUT"
+            echo "    .package(url: \"https://github.com/aptos-labs/aptos-swift-sdk.git\", from: \"$TAG\")," >> "$GITHUB_OUTPUT"
+            echo "]" >> "$GITHUB_OUTPUT"
+            echo '```' >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          else
+            echo "body<<EOF" >> "$GITHUB_OUTPUT"
+            echo "## Aptos Swift SDK $TAG" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "### Changes since $PREV_TAG" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            git log "$PREV_TAG".."$TAG" --pretty=format:"- %s" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo "### Installation" >> "$GITHUB_OUTPUT"
+            echo "" >> "$GITHUB_OUTPUT"
+            echo '```swift' >> "$GITHUB_OUTPUT"
+            echo "dependencies: [" >> "$GITHUB_OUTPUT"
+            echo "    .package(url: \"https://github.com/aptos-labs/aptos-swift-sdk.git\", from: \"$TAG\")," >> "$GITHUB_OUTPUT"
+            echo "]" >> "$GITHUB_OUTPUT"
+            echo '```' >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body: ${{ steps.notes.outputs.body }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

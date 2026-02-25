@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - '[0-9]+.[0-9]+.[0-9]+*'
+      - '[0-9]*.[0-9]*.[0-9]*'
 
 permissions:
   contents: write
@@ -11,7 +11,7 @@ permissions:
 jobs:
   validate:
     name: Validate Release
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
@@ -65,9 +65,10 @@ jobs:
         id: notes
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
+          DELIMITER="RELEASE_BODY_$(uuidgen)"
           PREV_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | head -2 | tail -1)
           if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "$TAG" ]; then
-            echo "body<<EOF" >> "$GITHUB_OUTPUT"
+            echo "body<<${DELIMITER}" >> "$GITHUB_OUTPUT"
             echo "## Aptos Swift SDK $TAG" >> "$GITHUB_OUTPUT"
             echo "" >> "$GITHUB_OUTPUT"
             echo "Initial release of the Aptos Swift SDK." >> "$GITHUB_OUTPUT"
@@ -81,9 +82,9 @@ jobs:
             echo "    .package(url: \"https://github.com/aptos-labs/aptos-swift-sdk.git\", from: \"$TAG\")," >> "$GITHUB_OUTPUT"
             echo "]" >> "$GITHUB_OUTPUT"
             echo '```' >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "${DELIMITER}" >> "$GITHUB_OUTPUT"
           else
-            echo "body<<EOF" >> "$GITHUB_OUTPUT"
+            echo "body<<${DELIMITER}" >> "$GITHUB_OUTPUT"
             echo "## Aptos Swift SDK $TAG" >> "$GITHUB_OUTPUT"
             echo "" >> "$GITHUB_OUTPUT"
             echo "### Changes since $PREV_TAG" >> "$GITHUB_OUTPUT"
@@ -98,7 +99,7 @@ jobs:
             echo "    .package(url: \"https://github.com/aptos-labs/aptos-swift-sdk.git\", from: \"$TAG\")," >> "$GITHUB_OUTPUT"
             echo "]" >> "$GITHUB_OUTPUT"
             echo '```' >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "${DELIMITER}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create GitHub Release
